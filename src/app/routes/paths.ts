@@ -72,12 +72,17 @@ type ClientSectionKey = keyof typeof clientSections;
 export const paths = {
   home: "/",
   services: "/services",
+  providers: "/providers",
+  providerProfile: "/providers/:providerId",
   howItWorks: "/how-it-works",
   about: "/about",
   auth: {
     signIn: "/signin",
     clientSignup: "/client-signup",
     providerSignup: "/provider-signup",
+    forgotPassword: "/forgot-password",
+    resetPassword: "/reset-password",
+    emailVerification: "/verify-email",
   },
   dashboard: {
     root: "/dashboard",

@@ -16,10 +16,37 @@ interface ServiceCategory {
 }
 
 function getServiceImage(name: string) {
-  return landingServices.find((service) => service.title === name)?.image ?? "";
+  return (
+    landingServices.find((service) => service.title === name)?.image ??
+    "/img/278bd27bab02e12cdaebe52cd5f0e324fca49567d4ba3ac028ca43bb8f65d3c1.jpeg"
+  );
 }
 
 const services: ServiceCategory[] = [
+  {
+    id: "graphics-design",
+    name: "Graphics Design",
+    rating: 4.9,
+    description:
+      "Logo design, social media creatives, brand kits, flyers, and marketing assets crafted by vetted creative professionals.",
+    providerCount: 540,
+  },
+  {
+    id: "ui-ux-design",
+    name: "UI/UX Design",
+    rating: 4.9,
+    description:
+      "Wireframes, user journeys, prototypes, and polished interface designs for web and mobile products focused on conversion and usability.",
+    providerCount: 420,
+  },
+  {
+    id: "web-development",
+    name: "Web Development",
+    rating: 4.8,
+    description:
+      "Responsive websites, landing pages, and frontend implementation services to bring your brand and product ideas to life.",
+    providerCount: 500,
+  },
   {
     id: "snow-cleaning",
     name: "Snow Cleaning",
@@ -130,7 +157,7 @@ export default function ServiceCategories() {
               All Service Categories
             </h1>
             <p className="text-gray-600 text-sm">
-              10 categories • 5,000+ verified providers
+              {services.length} categories • 5,000+ verified providers
             </p>
           </div>
 
@@ -157,12 +184,12 @@ export default function ServiceCategories() {
                     <h2 className="text-lg font-semibold text-gray-900">
                       {service.name}
                     </h2>
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* <div className="flex items-center gap-1 flex-shrink-0">
                       <Star size={16} className="fill-gray-900 text-gray-900" />
                       <span className="text-sm font-medium text-gray-900">
                         {service.rating}
                       </span>
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Description */}

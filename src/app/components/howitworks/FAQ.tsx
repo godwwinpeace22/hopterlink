@@ -46,7 +46,7 @@ export default function Faq() {
             Frequently Asked Questions
           </h2>
           <p className="text-gray-600 text-sm sm:text-base">
-            Everything you need to know about using Fixers Hive
+            Everything you need to know about using Hopterlink
           </p>
         </div>
 

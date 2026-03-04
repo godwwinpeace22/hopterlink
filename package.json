@@ -1,11 +1,11 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "hopterlink",
   "private": true,
   "version": "0.0.1",
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "eval \"$(./scripts/supabase-env.sh)\" && vite"
+    "dev": "vite"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

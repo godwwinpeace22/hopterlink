@@ -2,28 +2,28 @@ import { Shield, Heart, Award, Globe } from "lucide-react";
 
 const values = [
   {
-    icon: Shield,
-    title: "Trust & Safety",
+    icon: Globe,
+    title: "Diverse Range of Services",
     description:
-      "Every provider is background-checked and verified. Our escrow system protects every transaction.",
+      "From everyday essentials to specialized services, Hopterlink offers a vast array of options. Whether you're a consumer seeking reliable services or a provider looking to reach a broader audience, our platform is designed to support you.",
   },
   {
     icon: Heart,
-    title: "Community First",
+    title: "Seamless User Experience",
     description:
-      "We empower local professionals and help communities thrive by keeping business local.",
+      "Our intuitive interface makes it easy to navigate, find what you need, and interact with service providers. With instant messaging, detailed reviews, and star rankings, every interaction on Hopterlink is smooth and satisfying.",
+  },
+  {
+    icon: Shield,
+    title: "Security & Trust",
+    description:
+      "We prioritize your safety and security. Hopterlink employs advanced encryption and secure payment gateways to protect your data and transactions, plus a robust reporting system that ensures all users adhere to our community guidelines.",
   },
   {
     icon: Award,
-    title: "Quality Standards",
+    title: "Continuous Improvement",
     description:
-      "Our rating and review system ensures high-quality service delivery from every provider.",
-  },
-  {
-    icon: Globe,
-    title: "Accessibility",
-    description:
-      "Making professional services accessible and affordable for everyone across North America.",
+      "Hopterlink is committed to innovation. We listen to our users and constantly evolve the platform to better serve their needs, keeping us at the cutting edge of technology and user experience.",
   },
 ];
 
@@ -33,10 +33,10 @@ export default function AboutValues() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-black mb-4">
-            Our Values
+            What We Offer
           </h2>
           <p className="text-xl text-[#717182]">
-            The principles that guide everything we do
+            Everything you need, all in one platform
           </p>
         </div>
 
@@ -50,7 +50,7 @@ export default function AboutValues() {
               >
                 <div className="flex justify-center mb-4">
                   <div className="bg-[#2B2B2B] text-white p-4 rounded-full">
-                    <Icon className="w-6 h-6 text-[#F7C876]" />
+                    <Icon className="w-6 h-6 text-amber-500" />
                   </div>
                 </div>
                 <h3 className="text-lg font-bold text-black mb-2">

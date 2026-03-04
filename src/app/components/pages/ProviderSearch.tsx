@@ -207,7 +207,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex flex-wrap items-center gap-3 mb-3">
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
@@ -240,7 +240,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
               {provider.bio}
             </p>
 
-            <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <DollarSign className="h-4 w-4" />
                 <span>
@@ -253,7 +253,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                <span>{provider.serviceArea}</span>
+                <span className="break-words">{provider.serviceArea}</span>
               </div>
               <div className="flex items-center gap-2 text-primary">
                 <CheckCircle className="h-4 w-4" />
@@ -261,14 +261,14 @@ export function ProviderSearch({}: ProviderSearchProps) {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() =>
                   navigate("/dashboard/client/providers/profile", {
                     state: { providerId: provider.id },
                   })
                 }
-                className="flex-1"
+                className="w-full sm:flex-1 sm:w-auto"
               >
                 View Profile
               </Button>
@@ -278,14 +278,15 @@ export function ProviderSearch({}: ProviderSearchProps) {
                     state: { providerId: provider.id },
                   })
                 }
-                variant="secondary"
-                className="flex-1"
+                variant="default"
+                className="w-full sm:flex-1 sm:w-auto"
               >
                 Book Now
               </Button>
               <Button
                 variant="outline"
                 onClick={() => alert("Message feature coming soon!")}
+                className="w-full sm:w-auto border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
               >
                 Message
               </Button>
@@ -297,9 +298,9 @@ export function ProviderSearch({}: ProviderSearchProps) {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b bg-muted/40 py-10">
-        <div className="mx-auto max-w-7xl px-4 lg:px-6">
+    <div className="w-full overflow-hidden">
+      <div className="border-b py-10 -mx-6 lg:-mx-8 px-6 lg:px-8">
+        <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Find Local Service Providers
           </h1>
@@ -343,20 +344,20 @@ export function ProviderSearch({}: ProviderSearchProps) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
+      <div className="py-8">
         <div className="mb-8">
           <h2 className="mb-4 text-xl font-semibold text-foreground">
             Browse by Category
           </h2>
-          <div className="overflow-x-auto pb-2">
-            <div className="flex min-w-max gap-3">
+          <div className="pb-2 max-w-full">
+            <div className="flex flex-wrap gap-3">
               {PROVIDER_SEARCH_CATEGORIES.map((category) => {
                 const isSelected = selectedCategory === category;
                 return (
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
-                    className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                    className={`rounded-full border px-4 py-2 text-sm text-left whitespace-normal break-words transition-colors ${
                       isSelected
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"
@@ -448,7 +449,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
 
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
                   onClick={() =>
                     setFilters({
                       minRating: 0,

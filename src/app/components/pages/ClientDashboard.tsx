@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import logo from "@/assets/logo.png";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -1449,12 +1450,7 @@ export function ClientDashboard({ section, jobId }: ClientDashboardProps) {
               <Menu className="h-6 w-6 text-gray-600" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">FH</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900 hidden sm:block">
-                Fixers Hive
-              </span>
+              <img src={logo} alt="Hopterlink" className="h-8 w-auto" />
             </div>
           </div>
 

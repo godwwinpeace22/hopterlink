@@ -1095,7 +1095,7 @@ export function ProviderOnboarding() {
             <h2 className="text-3xl font-bold">Application Submitted!</h2>
 
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Thank you for applying to become a Fixers Hive service provider
+              Thank you for applying to become a Hopterlink service provider
             </p>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">

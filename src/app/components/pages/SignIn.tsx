@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -109,9 +109,12 @@ export function SignIn() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <Label htmlFor="password">Password</Label>
-                  <button className="text-sm text-[#F7C876] hover:text-[#EFA055]">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-amber-500 hover:text-orange-500"
+                  >
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
                 <Input
                   id="password"
@@ -127,7 +130,7 @@ export function SignIn() {
 
               <Button
                 type="submit"
-                className="w-full bg-[#F7C876] hover:bg-[#EFA055] py-6"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6"
               >
                 {isSubmitting ? "Signing In..." : "Sign In"}
               </Button>
@@ -140,7 +143,7 @@ export function SignIn() {
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-white text-gray-500">
-                    New to Fixers Hive?
+                    New to Hopterlink?
                   </span>
                 </div>
               </div>

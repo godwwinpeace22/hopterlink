@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { paths } from "@/app/routes/paths";
+import logo from "@/assets/logo.png";
 
 export function Header() {
   const navigate = useNavigate();
@@ -21,9 +22,10 @@ export function Header() {
 
   const navLinks = [
     { to: "/services", label: "Services" },
+    { to: "/providers", label: "Providers" },
     { to: "/how-it-works", label: "How It Works" },
     { to: "/about", label: "About" },
-    { to: "/pricing", label: "Pricing" },
+    // { to: "/pricing", label: "Pricing" },
   ];
 
   const isActiveLink = (path: string) =>
@@ -69,10 +71,10 @@ export function Header() {
   ) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1 rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F7C876] focus-visible:ring-offset-2">
+        <button className="flex items-center gap-1 rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
           <Avatar className={`${avatarSizeClass} border border-gray-200`}>
             <AvatarImage src={profile?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-[#F7C876] text-white text-sm font-semibold">
+            <AvatarFallback className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -86,7 +88,7 @@ export function Header() {
               key={link.to}
               onClick={() => navigate(link.to)}
               className={
-                isActiveLink(link.to) ? "text-[#F1A400] font-semibold" : ""
+                isActiveLink(link.to) ? "text-amber-600 font-semibold" : ""
               }
             >
               {link.label}
@@ -114,12 +116,7 @@ export function Header() {
           {/* Logo */}
           <div className="flex flex-1 items-center">
             <Link className="flex items-center gap-2 cursor-pointer" to="/">
-              <div className="h-10 w-10 bg-[#F7C876] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">FH</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">
-                Fixers Hive
-              </span>
+              <img src={logo} alt="Hopterlink" className="h-6 w-auto" />
             </Link>
           </div>
 
@@ -129,7 +126,7 @@ export function Header() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`transition-colors ${isActiveLink(link.to) ? "text-[#F1A400] font-semibold" : "text-gray-700 hover:text-[#F7C876]"}`}
+                className={`transition-colors ${isActiveLink(link.to) ? "text-amber-600 font-semibold" : "text-gray-700 hover:text-amber-500"}`}
               >
                 {link.label}
               </Link>
@@ -145,7 +142,7 @@ export function Header() {
                   Sign In
                 </Button>
                 <Button
-                  className="bg-[#F7C876] hover:bg-[#EFA055]"
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
                   onClick={() => navigate("/client-signup")}
                 >
                   Get Started
@@ -179,7 +176,7 @@ export function Header() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`block py-2 transition-colors ${isActiveLink(link.to) ? "text-[#F1A400] font-semibold" : "text-gray-700 hover:text-[#F7C876]"}`}
+                className={`block py-2 transition-colors ${isActiveLink(link.to) ? "text-amber-600 font-semibold" : "text-gray-700 hover:text-amber-500"}`}
               >
                 {link.label}
               </Link>
@@ -196,7 +193,7 @@ export function Header() {
                 Sign In
               </Button>
               <Button
-                className="w-full bg-[#F7C876] hover:bg-[#EFA055]"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   navigate("/client-signup");

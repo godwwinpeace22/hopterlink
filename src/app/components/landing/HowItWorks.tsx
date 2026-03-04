@@ -1,185 +1,71 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Card, CardContent } from "../ui/card";
+const steps = [
+  {
+    number: "1",
+    title: "Post a Service",
+    description:
+      "After you post a job, our matching system identifies and alerts relevant Providers, who can then express interest in your job.",
+    icon: "/img/icons/work-01.svg",
+  },
+  {
+    number: "2",
+    title: "Getting Booked & Job Done",
+    description:
+      "After you post a job, our matching system identifies and alerts relevant Providers, who can then express interest in your job.",
+    icon: "/img/icons/work-01.svg",
+  },
+  {
+    number: "3",
+    title: "Get Reviewed & Get Leads",
+    description:
+      "After you post a job, our matching system identifies and alerts relevant Providers, who can then express interest in your job.",
+    icon: "/img/icons/work-03.svg",
+  },
+];
 
 export function HowItWorks() {
   return (
-    <section className="py-20 bg-white">
+    <section className="py-16 lg:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            How Fixers Hive Works
-          </h2>
-          <p className="text-xl text-gray-600">
-            Simple, secure, and reliable for everyone
-          </p>
+        <div className="relative bg-gray-900 rounded-3xl overflow-hidden px-6 py-16 sm:px-12 sm:py-20">
+          {/* Background decorations */}
+          <div className="absolute top-0 left-0 opacity-10">
+            <img src="/img/bg/work-bg-01.svg" alt="" className="w-48" />
+          </div>
+          <div className="absolute bottom-0 right-0 opacity-10">
+            <img src="/img/bg/work-bg-02.svg" alt="" className="w-48" />
+          </div>
+
+          {/* Header */}
+          <div className="text-center mb-14 relative z-10">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              How Hopterlink{" "}
+              <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                Works
+              </span>
+            </h2>
+            <p className="text-gray-400 max-w-md mx-auto">
+              Each listing is designed to be clear and concise, providing
+              customers with the best experience.
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div className="grid md:grid-cols-3 gap-8 relative z-10">
+            {steps.map((step) => (
+              <div key={step.number} className="text-center group">
+                <div className="mb-5 inline-flex items-center justify-center">
+                  <img src={step.icon} alt={step.title} className="h-16 w-16" />
+                </div>
+                <h6 className="text-white font-semibold text-lg mb-3">
+                  {step.number}. {step.title}
+                </h6>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="client" className="max-w-5xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2 mb-12">
-            <TabsTrigger value="client" className="text-lg py-3">
-              For Clients
-            </TabsTrigger>
-            <TabsTrigger value="provider" className="text-lg py-3">
-              For Service Providers
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Client Flow */}
-          <TabsContent value="client" className="space-y-8">
-            <div className="grid md:grid-cols-3 gap-8">
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className=" h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    1
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">
-                    Search & Discover
-                  </h3>
-                  <p className="text-gray-600">
-                    Browse service categories or search for specific providers.
-                    View ratings, availability, and pricing.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className=" h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    2
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">Request & Book</h3>
-                  <p className="text-gray-600">
-                    Describe your job and receive quotes from available
-                    providers. Choose the best fit and book instantly.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className=" h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    3
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">Pay Securely</h3>
-                  <p className="text-gray-600">
-                    Fund your job with secure payment. Money is held in escrow
-                    until work is completed to your satisfaction.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className=" h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    4
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">Rate & Review</h3>
-                  <p className="text-gray-600">
-                    Once the job is complete, rate your experience and help
-                    build a trusted community.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-[#F7C8764D]">
-                <CardContent className="pt-6 pb-6">
-                  <div className="text-[#F9AC1E] font-semibold mb-2">
-                    ✨ Bonus Rewards
-                  </div>
-                  <p className="text-gray-700 font-medium mb-2">
-                    Earn 0.5% cashback on every $100 spent
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Use rewards for future bookings or fee waivers
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Provider Flow */}
-          <TabsContent value="provider" className="space-y-8">
-            <div className="grid md:grid-cols-3 gap-8">
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className="h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    1
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">Create Profile</h3>
-                  <p className="text-gray-600">
-                    Sign up, verify your credentials, and showcase your skills
-                    with photos and descriptions.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className="h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    2
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">
-                    Set Availability
-                  </h3>
-                  <p className="text-gray-600">
-                    Update your schedule up to 2 weeks in advance. Clients see
-                    your availability in real-time.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className="h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    3
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">
-                    Get Job Requests
-                  </h3>
-                  <p className="text-gray-600">
-                    Receive notifications for nearby jobs. Browse the job board
-                    or wait for direct bookings.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-              <Card className="relative">
-                <CardContent className="pt-8 pb-6">
-                  <div className="h-11 w-11 mb-5 bg-black rounded-full flex items-center justify-center text-[#F7C876] font-bold text-xl shadow-lg">
-                    4
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">
-                    Complete & Get Paid
-                  </h3>
-                  <p className="text-gray-600">
-                    Finish the job, get client approval, and receive payment
-                    instantly to your wallet.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-[#F7C8764D]">
-                <CardContent className="pt-6 pb-6">
-                  <div className="text-[#F9AC1E] font-semibold mb-2">
-                    💰 Competitive Pricing
-                  </div>
-                  <p className="text-gray-700 font-medium mb-2">
-                    Only 3-5% commission per job
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Set your own prices. Earn cashback to waive future fees.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
       </div>
     </section>
   );

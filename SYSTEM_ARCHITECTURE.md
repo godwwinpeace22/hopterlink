@@ -1,4 +1,4 @@
-# 🏗️ SYSTEM ARCHITECTURE - Fixers Hive Job Posting & Bidding System
+# 🏗️ SYSTEM ARCHITECTURE - Hopterlink Job Posting & Bidding System
 
 ## 📁 FILE STRUCTURE
 

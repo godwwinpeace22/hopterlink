@@ -1,4 +1,4 @@
--- Fixers Hive - Complete Supabase Schema Design
+-- Hopterlink - Complete Supabase Schema Design
 -- Generated: 2026-01-23
 -- Based on: SYSTEM_ARCHITECTURE.md + Frontend Audit
 

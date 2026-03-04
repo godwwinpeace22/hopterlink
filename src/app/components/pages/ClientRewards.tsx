@@ -434,8 +434,8 @@ export function ClientRewards({}: ClientRewardsProps) {
   };
 
   const handleShare = (platform: string) => {
-    const shareText = `Join me on Fixers Hive and get $25 off your first booking! Use my code: ${clientData.referralCode}`;
-    const shareUrl = `https://fixershive.com/signup?ref=${clientData.referralCode}`;
+    const shareText = `Join me on Hopterlink and get $25 off your first booking! Use my code: ${clientData.referralCode}`;
+    const shareUrl = `https://hopterlink.com/signup?ref=${clientData.referralCode}`;
 
     switch (platform) {
       case "facebook":
@@ -451,7 +451,7 @@ export function ClientRewards({}: ClientRewardsProps) {
         );
         break;
       case "email":
-        window.location.href = `mailto:?subject=Join Fixers Hive&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
+        window.location.href = `mailto:?subject=Join Hopterlink&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
         break;
       case "whatsapp":
         window.open(
@@ -479,7 +479,7 @@ export function ClientRewards({}: ClientRewardsProps) {
               <span className="text-white font-bold text-xl">FH</span>
             </div>
             <span className="text-xl font-bold text-gray-900 hidden sm:block">
-              Fixers Hive
+              Hopterlink
             </span>
           </div>
         </div>

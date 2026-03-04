@@ -156,7 +156,7 @@ Deno.serve(async (req: Request) => {
   form.set("line_items[0][price_data][product_data][name]", "Wallet top-up");
   form.set(
     "line_items[0][price_data][product_data][description]",
-    "FixersHive wallet credit",
+    "Hopterlink wallet credit",
   );
   form.set("metadata[topup_id]", topupId);
   form.set("metadata[user_id]", userId);

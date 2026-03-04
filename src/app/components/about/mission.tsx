@@ -20,24 +20,23 @@ export default function AboutMission() {
             <div className="flex items-center gap-2 mb-4">
               <Target className="w-5 h-5 text-gray-800" />
               <span className="text-sm font-semibold text-gray-800">
-                Our Mission
+                Our Vision
               </span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold text-black mb-6 leading-tight">
-              Empowering Local Service Economies
+              Finding the Right Service in a Click
             </h2>
             <div className="space-y-6 text-gray-600 leading-relaxed">
               <p>
-                We believe that local service providers are the backbone of
-                every community. But finding trustworthy help shouldn't be a
-                gamble. Fixers Hive bridges the gap between skilled
-                professionals and the people who need them, with built-in trust,
-                safety, and transparency.
+                At Hopterlink, we envision a world where finding the right
+                service or product is as simple as a click. We aim to empower
+                both consumers and providers by creating a user-friendly
+                platform that fosters trust, transparency, and excellence.
               </p>
               <p>
-                Our platform gives independent professionals the tools to grow
-                their businesses, and gives clients the confidence to hire with
-                peace of mind.
+                Our goal is to become the go-to destination for all your service
+                needs, whether you're looking for skilled professionals,
+                specialized products, or anything in between.
               </p>
             </div>
           </div>

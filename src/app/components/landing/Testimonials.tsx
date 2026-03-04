@@ -1,131 +1,146 @@
-import { Card, CardContent } from "../ui/card";
-import { Star } from "lucide-react";
+import { useCallback } from "react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
 
 const testimonials = [
   {
-    name: "Sarah Johnson",
-    role: "Homeowner",
-    rating: 5,
-    text: "Found a great landscaper in minutes! The availability scheduler made it so easy to book someone who could come the same day.",
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
+    title: "Quality of work was excellent",
+    text: "I had a great experience with ABC Electrical on the Services. The electrician arrived on time!!!",
+    author: "Robert Anderson",
+    avatar: "/img/profiles/avatar-14.jpg",
+    timeAgo: "2 Days Ago",
   },
   {
-    name: "Mike Rodriguez",
-    role: "Handyman Provider",
-    rating: 5,
-    text: "Fixers Hive has transformed my business. I get consistent bookings and the payment system is reliable. Best platform for independent contractors.",
-    image:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
+    title: "Green Cleaning",
+    text: "I love that they use eco-friendly products without compromising on cleanliness with care.",
+    author: "Delois Coffin",
+    avatar: "/img/profiles/avatar-15.jpg",
+    timeAgo: "3 Days Ago",
   },
   {
-    name: "Emily Chen",
-    role: "Property Manager",
-    rating: 5,
-    text: "I manage 12 properties and use Fixers Hive for everything from cleaning to emergency repairs. The escrow system gives me peace of mind.",
-    image:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
+    title: "Luxury Car Cleaning",
+    text: "Exceptional care for my luxury vehicle. The team treated my car with precision and care.",
+    author: "Matthew Hicks",
+    avatar: "/img/profiles/avatar-13.jpg",
+    timeAgo: "5 Days Ago",
   },
   {
-    name: "David Thompson",
-    role: "Snow Removal Provider",
-    rating: 5,
-    text: "The 2-week availability feature is a game changer. Clients can see exactly when I'm free, and I fill my schedule weeks in advance.",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop",
-  },
-  {
-    name: "Jessica Martinez",
-    role: "Small Business Owner",
-    rating: 5,
-    text: "As a cleaning service owner, Fixers Hive helps me reach more customers without expensive advertising. The 3-5% commission is very fair.",
-    image:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop",
-  },
-  {
-    name: "Robert Lee",
-    role: "Homeowner",
-    rating: 5,
-    text: "Used the platform to find a mechanic for my car. Got three quotes within an hour and saved $200 compared to the dealership!",
-    image:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop",
+    title: "Quick and reliable",
+    text: "They fixed my issue in no time and got everything running smoothly again! Good work",
+    author: "Daniel Davis",
+    avatar: "/img/profiles/avatar-12.jpg",
+    timeAgo: "7 Days Ago",
   },
 ];
 
 export function Testimonials() {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: true,
+    align: "start",
+    slidesToScroll: 1,
+  });
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-16 lg:py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Loved by Clients & Providers
+        {/* Section Header */}
+        <div className="text-center max-w-xl mx-auto mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+            Genuine reviews from{" "}
+            <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+              Customers
+            </span>
           </h2>
-          <p className="text-xl text-gray-600">
-            Join thousands who trust Fixers Hive for their service needs
+          <p className="text-gray-600">
+            Each listing is designed to be clear and concise, providing
+            customers with the best experience.
           </p>
         </div>
 
-        {/* Testimonials Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <Card key={index} className="hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
-                {/* Rating */}
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="h-5 w-5 fill-[#F7C876] text-[#F7C876]"
-                    />
-                  ))}
-                </div>
-
-                {/* Review Text */}
-                <p className="text-gray-700 mb-6 italic">
-                  "{testimonial.text}"
-                </p>
-
-                {/* Author */}
-                <div className="flex items-center gap-3">
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {testimonial.name}
+        {/* Carousel */}
+        <div className="relative">
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex gap-6">
+              {testimonials.map((testimonial, index) => (
+                <div
+                  key={index}
+                  className="flex-[0_0_100%] sm:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0"
+                >
+                  <div className="bg-white rounded-xl border border-gray-100 p-6 h-full flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                    {/* Stars */}
+                    <div className="flex items-center gap-1 mb-4">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className="h-4 w-4 text-amber-400 fill-amber-400"
+                        />
+                      ))}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {testimonial.role}
+
+                    <h5 className="font-semibold text-gray-900 mb-2">
+                      {testimonial.title}
+                    </h5>
+                    <p className="text-gray-600 text-sm mb-6 flex-1 leading-relaxed">
+                      "{testimonial.text}"
+                    </p>
+
+                    {/* Author */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <img
+                          src={testimonial.avatar}
+                          alt={testimonial.author}
+                          className="h-10 w-10 rounded-full object-cover shrink-0"
+                        />
+                        <h6 className="font-semibold text-gray-900 text-sm truncate">
+                          {testimonial.author}
+                        </h6>
+                      </div>
+                      <p className="text-xs text-gray-500 whitespace-nowrap">
+                        {testimonial.timeAgo}
+                      </p>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              ))}
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <button
+            onClick={scrollPrev}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 h-10 w-10 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors z-10"
+          >
+            <ChevronLeft className="h-5 w-5 text-gray-700" />
+          </button>
+          <button
+            onClick={scrollNext}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 h-10 w-10 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors z-10"
+          >
+            <ChevronRight className="h-5 w-5 text-gray-700" />
+          </button>
         </div>
 
-        {/* Stats Bar */}
-        <div className="mt-16 bg-white rounded-2xl shadow-lg p-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-black mb-2">4.8/5</div>
-              <div className="text-[#AB7501]">Average Rating</div>
+        {/* Summary */}
+        <div className="text-center mt-10">
+          <h6 className="font-semibold text-gray-900 mb-2">
+            Each listing is designed to be clear and concise, providing
+            customers
+          </h6>
+          <div className="flex items-center justify-center gap-2">
+            <span className="font-medium text-gray-900">Excellent</span>
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className="h-5 w-5 text-amber-400 fill-amber-400"
+                />
+              ))}
             </div>
-            <div>
-              <div className="text-4xl font-bold text-black mb-2">50K+</div>
-              <div className="text-[#AB7501]">Jobs Completed</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-black mb-2">5K+</div>
-              <div className="text-[#AB7501]">Active Providers</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-black mb-2">98%</div>
-              <div className="text-[#AB7501]">Satisfaction Rate</div>
-            </div>
+            <span className="text-sm text-gray-500">Based on 456 reviews</span>
           </div>
         </div>
       </div>

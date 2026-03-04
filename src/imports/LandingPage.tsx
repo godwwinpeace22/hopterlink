@@ -345,7 +345,7 @@ export default function LandingPage() {
                 </BackgroundImage4>
               </BackgroundImage5>
               <BackgroundImage3 additionalClassNames="h-[32px]">
-                <p className="absolute font-['Inter:Bold',sans-serif] font-bold leading-[32px] left-0 not-italic text-[#101828] text-[24px] text-nowrap top-0 tracking-[0.0703px]">Fixers Hive</p>
+                <p className="absolute font-['Inter:Bold',sans-serif] font-bold leading-[32px] left-0 not-italic text-[#101828] text-[24px] text-nowrap top-0 tracking-[0.0703px]">Hopterlink</p>
               </BackgroundImage3>
             </div>
           </div>
@@ -603,7 +603,7 @@ export default function LandingPage() {
           <div className="absolute bg-white h-[818px] left-0 top-[1607px] w-[1800px]" data-name="HowItWorks">
             <div className="absolute content-stretch flex flex-col gap-[16px] h-[84px] items-start left-[516px] top-[80px] w-[768px]" data-name="Container">
               <div className="h-[40px] relative shrink-0 w-full" data-name="Heading 2">
-                <p className="absolute font-['Inter:Bold',sans-serif] font-bold leading-[40px] left-[384.53px] not-italic text-[#101828] text-[36px] text-center text-nowrap top-[0.5px] tracking-[0.3691px] translate-x-[-50%]">How Fixers Hive Works</p>
+                <p className="absolute font-['Inter:Bold',sans-serif] font-bold leading-[40px] left-[384.53px] not-italic text-[#101828] text-[36px] text-center text-nowrap top-[0.5px] tracking-[0.3691px] translate-x-[-50%]">How Hopterlink Works</p>
               </div>
               <div className="h-[28px] relative shrink-0 w-full" data-name="Paragraph">
                 <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-[383.86px] not-italic text-[#4a5565] text-[20px] text-center text-nowrap top-0 tracking-[-0.4492px] translate-x-[-50%]">Simple, secure, and reliable for everyone</p>
@@ -841,7 +841,7 @@ export default function LandingPage() {
                       <div className="bg-clip-padding border-0 border-[transparent] border-solid relative size-full">
                         <BackgroundImageAndText text="Insurance Coverage Options" additionalClassNames="left-0 top-0 w-[766px]" />
                         <div className="absolute h-[48px] left-0 top-[36px] w-[995px]" data-name="Paragraph">
-                          <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#364153] text-[16px] top-0 tracking-[-0.3125px] w-[915px]">{`All service providers must carry their own insurance or opt-in to Fixers Hive's optional coverage plan. Your projects are always`}</p>
+                          <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#364153] text-[16px] top-0 tracking-[-0.3125px] w-[915px]">{`All service providers must carry their own insurance or opt-in to Hopterlink's optional coverage plan. Your projects are always`}</p>
                           <div className="absolute content-stretch flex h-[19px] items-start left-[915px] top-[-1px] w-[74.57px]" data-name="Text">
                             <p className="font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[24px] not-italic relative shrink-0 text-[#e70000] text-[16px] text-nowrap tracking-[-0.3125px]">protected</p>
                           </div>
@@ -863,7 +863,7 @@ export default function LandingPage() {
                 <p className="absolute font-['Inter:Bold',sans-serif] font-bold leading-[40px] left-[384.08px] not-italic text-[#101828] text-[36px] text-center text-nowrap top-[0.5px] tracking-[0.3691px] translate-x-[-50%]">{`Loved by Clients & Providers`}</p>
               </div>
               <div className="h-[28px] relative shrink-0 w-full" data-name="Paragraph">
-                <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-[384.72px] not-italic text-[#4a5565] text-[20px] text-center text-nowrap top-0 tracking-[-0.4492px] translate-x-[-50%]">Join thousands who trust Fixers Hive for their service needs</p>
+                <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[28px] left-[384.72px] not-italic text-[#4a5565] text-[20px] text-center text-nowrap top-0 tracking-[-0.4492px] translate-x-[-50%]">Join thousands who trust Hopterlink for their service needs</p>
               </div>
             </div>
             <div className="absolute gap-[32px] grid grid-cols-[repeat(3,_minmax(0px,_1fr))] grid-rows-[repeat(2,_minmax(0px,_1fr))] h-[540px] left-[32px] top-[148px] w-[1216px]" data-name="Container">
@@ -898,7 +898,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                   <div className="h-[96px] relative shrink-0 w-full" data-name="Testimonials">
-                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[316px]">{`"Fixers Hive has transformed my business. I get consistent bookings and the payment system is reliable. Best platform for independent contractors."`}</p>
+                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[316px]">{`"Hopterlink has transformed my business. I get consistent bookings and the payment system is reliable. Best platform for independent contractors."`}</p>
                   </div>
                   <div className="content-stretch flex gap-[12px] h-[48px] items-center relative shrink-0 w-full" data-name="Testimonials">
                     <div className="rounded-[1.67772e+07px] shrink-0 size-[48px]" data-name="Image (Mike Rodriguez)" />
@@ -920,7 +920,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                   <div className="h-[96px] relative shrink-0 w-full" data-name="Testimonials">
-                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[318px]">{`"I manage 12 properties and use Fixers Hive for everything from cleaning to emergency repairs. The escrow system gives me peace of mind."`}</p>
+                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[318px]">{`"I manage 12 properties and use Hopterlink for everything from cleaning to emergency repairs. The escrow system gives me peace of mind."`}</p>
                   </div>
                   <div className="content-stretch flex gap-[12px] h-[48px] items-center relative shrink-0 w-full" data-name="Testimonials">
                     <div className="rounded-[1.67772e+07px] shrink-0 size-[48px]" data-name="Image (Emily Chen)" />
@@ -964,7 +964,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                   <div className="h-[96px] relative shrink-0 w-full" data-name="Testimonials">
-                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[330px]">{`"As a cleaning service owner, Fixers Hive helps me reach more customers without expensive advertising. The 3-5% commission is very fair."`}</p>
+                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[330px]">{`"As a cleaning service owner, Hopterlink helps me reach more customers without expensive advertising. The 3-5% commission is very fair."`}</p>
                   </div>
                   <div className="content-stretch flex gap-[44px] h-[48px] items-center relative shrink-0 w-full" data-name="Testimonials">
                     <div className="rounded-[1.67772e+07px] shrink-0 size-[48px]" data-name="Image (Jessica Martinez)" />
@@ -1205,7 +1205,7 @@ export default function LandingPage() {
                 </BackgroundImage5>
                 <div className="h-[32px] relative shrink-0 w-[122.398px]" data-name="Text">
                   <div className="bg-clip-padding border-0 border-[transparent] border-solid relative size-full">
-                    <p className="absolute font-['Inter:Bold',sans-serif] font-bold leading-[32px] left-0 not-italic text-[24px] text-nowrap text-white top-0 tracking-[0.0703px]">Fixers Hive</p>
+                    <p className="absolute font-['Inter:Bold',sans-serif] font-bold leading-[32px] left-0 not-italic text-[24px] text-nowrap text-white top-0 tracking-[0.0703px]">Hopterlink</p>
                   </div>
                 </div>
               </div>
@@ -1313,7 +1313,7 @@ export default function LandingPage() {
             <div aria-hidden="true" className="absolute border-[#1e2939] border-[1px_0px_0px] border-solid inset-0 pointer-events-none" />
             <div className="h-[20px] relative shrink-0 w-[276.32px]" data-name="Paragraph">
               <div className="bg-clip-padding border-0 border-[transparent] border-solid relative size-full">
-                <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#99a1af] text-[14px] text-nowrap top-[0.5px] tracking-[-0.1504px]">© 2024 Fixers Hive Inc. All rights reserved.</p>
+                <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[20px] left-0 not-italic text-[#99a1af] text-[14px] text-nowrap top-[0.5px] tracking-[-0.1504px]">© 2024 Hopterlink Inc. All rights reserved.</p>
               </div>
             </div>
             <div className="h-[20px] relative shrink-0 w-[332.891px]" data-name="Container">

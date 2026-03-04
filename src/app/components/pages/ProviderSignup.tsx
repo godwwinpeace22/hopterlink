@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { SignupTabs } from "./SignupTabs";
 
 export function ProviderSignup() {
   const navigate = useNavigate();
@@ -75,9 +76,7 @@ export function ProviderSignup() {
 
         navigate("/provider/onboarding");
       } else {
-        setInfoMessage(
-          "Check your email to verify your account, then sign in.",
-        );
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       }
     } catch (error) {
       const message =
@@ -93,6 +92,7 @@ export function ProviderSignup() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-md mx-auto">
+        <SignupTabs />
         <Card>
           <CardHeader className="mb-4">
             <CardTitle className="text-2xl">

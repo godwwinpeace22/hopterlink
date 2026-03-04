@@ -1,7 +1,7 @@
 
-  # Fixers Hive
+  # Hopterlink
 
-  This is a code bundle for Fixers Hive. The original project is available at https://www.figma.com/design/F1XsxsnQHYLjxgCKtScVKJ/Fixers-Hive.
+  This is a code bundle for Hopterlink. The original project is available at https://www.figma.com/design/F1XsxsnQHYLjxgCKtScVKJ/Hopterlink.
 
   ## Running the code
 

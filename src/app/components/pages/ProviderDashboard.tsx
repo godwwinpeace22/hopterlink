@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import logo from "@/assets/logo.png";
 import { Badge } from "../ui/badge";
 import {
   Bell,
@@ -901,10 +902,7 @@ export function ProviderDashboard() {
         <Sidebar collapsible="icon">
           <SidebarHeader className="px-3 py-4">
             <Link to="/dashboard/provider" className="flex items-center gap-2">
-              <div className="h-9 w-9 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">FH</span>
-              </div>
-              <span className="text-lg font-semibold">Fixers Hive</span>
+              <img src={logo} alt="Hopterlink" className="h-7 w-auto" />
             </Link>
           </SidebarHeader>
           <SidebarSeparator />

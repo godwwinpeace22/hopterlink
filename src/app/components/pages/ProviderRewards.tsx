@@ -348,8 +348,8 @@ export function ProviderRewards({}: ProviderRewardsProps) {
   };
 
   const handleShare = (platform: string) => {
-    const shareText = `Join Fixers Hive as a service provider! Use my code: ${providerData.referralCode} and get $50 bonus when you complete your first job.`;
-    const shareUrl = `https://fixershive.com/provider-signup?ref=${providerData.referralCode}`;
+    const shareText = `Join Hopterlink as a service provider! Use my code: ${providerData.referralCode} and get $50 bonus when you complete your first job.`;
+    const shareUrl = `https://hopterlink.com/provider-signup?ref=${providerData.referralCode}`;
 
     switch (platform) {
       case "facebook":
@@ -365,7 +365,7 @@ export function ProviderRewards({}: ProviderRewardsProps) {
         );
         break;
       case "email":
-        window.location.href = `mailto:?subject=Join Fixers Hive as a Provider&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
+        window.location.href = `mailto:?subject=Join Hopterlink as a Provider&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
         break;
       case "whatsapp":
         window.open(
@@ -393,7 +393,7 @@ export function ProviderRewards({}: ProviderRewardsProps) {
               <span className="text-white font-bold text-xl">FH</span>
             </div>
             <span className="text-xl font-bold text-gray-900 hidden sm:block">
-              Fixers Hive
+              Hopterlink
             </span>
           </div>
         </div>
@@ -839,7 +839,7 @@ export function ProviderRewards({}: ProviderRewardsProps) {
                           Share your code
                         </p>
                         <p className="text-sm text-gray-600">
-                          Invite other service professionals to join Fixers Hive
+                          Invite other service professionals to join Hopterlink
                         </p>
                       </div>
                     </div>

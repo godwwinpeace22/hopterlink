@@ -1,21 +1,21 @@
 const milestones = [
   {
     year: "2025",
-    title: "The Idea",
+    title: "The Beginning",
     description:
-      "Founded in Canada after experiencing firsthand how hard it is to find reliable, vetted local service providers.",
+      "Hopterlink was founded with a simple belief — everyone deserves easy access to quality services and trusted professionals.",
   },
   {
     year: "2026",
-    title: "Beta Launch",
+    title: "Growing Together",
     description:
-      "Launched in 3 Canadian cities with 200 providers. Introduced escrow payments and background checks from day one.",
+      "Our dedicated team works tirelessly to ensure that Hopterlink remains at the cutting edge of technology and user experience, providing you with the best possible service.",
   },
   {
     year: "2026",
-    title: "What's Next",
+    title: "Join the Journey",
     description:
-      "Expanding to 50+ cities, launching a provider mobile app, and introducing insurance partnerships.",
+      "Whether you're a consumer looking for top-notch services or a provider ready to showcase your offerings, Hopterlink is here to support your journey.",
   },
 ];
 import JourneyImage from "@/assets/about-journey.jpg";
@@ -27,17 +27,17 @@ export default function AboutJourney() {
           {/* Left Timeline */}
           <div>
             <h2 className="text-3xl sm:text-4xl font-bold text-[#0A0A0A] mb-3">
-              Our Journey
+              Our Commitment
             </h2>
             <p className="text-xl text-[#717182] mb-12">
-              From a Toronto startup to a North American marketplace
+              Continuous improvement and innovation, always
             </p>
 
             <div className="space-y-8">
               {milestones.map((milestone, index) => (
                 <div key={index} className="flex gap-6">
                   <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-full bg-gray-800 text-[#F7C876] flex items-center justify-center font-bold text-lg">
+                    <div className="w-12 h-12 rounded-full bg-gray-800 text-amber-500 flex items-center justify-center font-bold text-lg">
                       {index + 1}
                     </div>
                     {index < milestones.length - 1 && (

@@ -1,8 +1,7 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { Button } from "../../ui/button";
-import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,55 +34,15 @@ export function ClientDashboardHeader({
   unreadNotifications,
 }: ClientDashboardHeaderProps) {
   const navigate = useNavigate();
-  const {
-    signOut,
-    memberships,
-    approvedRoles,
-    activeRole,
-    switchRole,
-    startRoleOnboarding,
-  } = useAuth();
-  const [isRoleActionLoading, setIsRoleActionLoading] = useState(false);
-
-  const providerMembership = memberships.find(
-    (membership) => membership.role === "provider",
-  );
-  const canSwitchToProvider =
-    approvedRoles.includes("provider") && activeRole !== "provider";
-  const canStartProviderOnboarding = !providerMembership;
-  const canContinueProviderOnboarding =
-    Boolean(providerMembership) && providerMembership?.state !== "approved";
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  const handleProviderAction = async () => {
-    setIsRoleActionLoading(true);
-    try {
-      if (canSwitchToProvider) {
-        await switchRole("provider");
-        navigate("/dashboard/provider");
-        return;
-      }
-
-      if (canStartProviderOnboarding) {
-        await startRoleOnboarding("provider");
-        navigate("/provider/onboarding");
-        return;
-      }
-
-      if (canContinueProviderOnboarding) {
-        navigate("/provider/onboarding");
-      }
-    } finally {
-      setIsRoleActionLoading(false);
-    }
-  };
-
   return (
-    <header className="bg-white border-b sticky top-0 z-50">
+    <header className="bg-white border-b shrink-0">
       <div className="px-4 lg:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <SidebarTrigger />
@@ -95,10 +54,13 @@ export function ClientDashboardHeader({
             size="icon"
             className="relative"
             onClick={() => navigate("/dashboard/client/notifications")}
+            aria-label="View unread notifications"
           >
             <Bell className="h-5 w-5 text-gray-600" />
             {unreadNotifications > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+              <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
             )}
           </Button>
           <DropdownMenu>
@@ -109,7 +71,7 @@ export function ClientDashboardHeader({
               >
                 <Avatar>
                   {avatarUrl && <AvatarImage src={avatarUrl} />}
-                  <AvatarFallback className="bg-blue-600 text-white">
+                  <AvatarFallback className="bg-[#F1A400] text-white">
                     {getInitials(clientName || "Client")}
                   </AvatarFallback>
                 </Avatar>
@@ -127,12 +89,7 @@ export function ClientDashboardHeader({
               >
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={() => navigate("/dashboard/client/messages")}
-              >
-                Messages
-              </DropdownMenuItem>
+
               <DropdownMenuItem
                 className="cursor-pointer"
                 onSelect={() => navigate("/dashboard/client/my-jobs")}
@@ -145,27 +102,7 @@ export function ClientDashboardHeader({
               >
                 Post a Job
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={() => navigate("/rewards")}
-              >
-                Rewards
-              </DropdownMenuItem>
-              {(canSwitchToProvider ||
-                canStartProviderOnboarding ||
-                canContinueProviderOnboarding) && (
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onSelect={handleProviderAction}
-                  disabled={isRoleActionLoading}
-                >
-                  {canSwitchToProvider
-                    ? "Switch to Provider"
-                    : canStartProviderOnboarding
-                      ? "Become a Provider"
-                      : "Continue Provider Onboarding"}
-                </DropdownMenuItem>
-              )}
+
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer text-red-600 focus:text-red-600"

@@ -1,26 +1,61 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
+import { Skeleton } from "../ui/skeleton";
+import { Separator } from "../ui/separator";
+import { Switch } from "../ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import {
   Search,
   MapPin,
   Star,
   DollarSign,
-  Filter,
   CheckCircle,
   Clock,
+  Briefcase,
+  Zap,
+  Palette,
+  Code,
+  Layers,
+  Wrench,
+  Sparkles,
+  PaintBucket,
+  Leaf,
+  Hammer,
+  LayoutDashboard,
+  SlidersHorizontal,
+  Users,
+  TrendingUp,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import {
-  ALL_SERVICES_CATEGORY,
-  PROVIDER_SEARCH_CATEGORIES,
-} from "@/app/config/providerSearchCategories";
+import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
+import { useServiceCategories } from "@/lib/useServiceCategories";
 
 interface ProviderSearchProps {}
+
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  "All Services": <LayoutDashboard className="h-4 w-4" />,
+  "Graphics Design": <Palette className="h-4 w-4" />,
+  "UI/UX Design": <Layers className="h-4 w-4" />,
+  "Web Development": <Code className="h-4 w-4" />,
+  "Product Design": <Briefcase className="h-4 w-4" />,
+  Plumbing: <Wrench className="h-4 w-4" />,
+  Electrical: <Zap className="h-4 w-4" />,
+  Cleaning: <Sparkles className="h-4 w-4" />,
+  Painting: <PaintBucket className="h-4 w-4" />,
+  Landscaping: <Leaf className="h-4 w-4" />,
+  Carpentry: <Hammer className="h-4 w-4" />,
+};
 
 type Provider = {
   id: string;
@@ -42,14 +77,10 @@ type Provider = {
 
 export function ProviderSearch({}: ProviderSearchProps) {
   const navigate = useNavigate();
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { categoryNamesWithAll, ALL_SERVICES_LABEL } = useServiceCategories();
   const [searchQuery, setSearchQuery] = useState("");
-  const [location, setLocation] = useState("Springfield");
-  const [selectedCategory, setSelectedCategory] = useState(
-    ALL_SERVICES_CATEGORY,
-  );
+  const [location, setLocation] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(ALL_SERVICES_LABEL);
   const [filters, setFilters] = useState({
     minRating: 0,
     maxRate: 1000,
@@ -57,15 +88,15 @@ export function ProviderSearch({}: ProviderSearchProps) {
     verifiedOnly: false,
   });
 
-  useEffect(() => {
-    const fetchProviders = async () => {
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      const { data, error } = await supabase
-        .from("provider_profiles")
-        .select(
-          `
+  const {
+    data: rawResult,
+    isLoading,
+    error,
+  } = useSupabaseQuery(["provider_profiles_search"], () =>
+    supabase
+      .from("provider_profiles")
+      .select(
+        `
           user_id,
           business_name,
           bio,
@@ -82,53 +113,43 @@ export function ProviderSearch({}: ProviderSearchProps) {
             avatar_url
           )
         `,
-        )
-        .eq("verification_status", "approved")
-        .order("rating", { ascending: false });
+      )
+      .eq("verification_status", "approved")
+      .order("rating", { ascending: false }),
+  );
 
-      if (error) {
-        setErrorMessage(error.message);
-        setIsLoading(false);
-        return;
-      }
+  const providers = useMemo<Provider[]>(() => {
+    return (rawResult?.data ?? []).map((provider) => {
+      const serviceArea = provider.service_areas?.join(", ") ?? "Local area";
+      const availabilityKeys = provider.availability
+        ? Object.keys(provider.availability)
+        : [];
+      const nextAvailable =
+        availabilityKeys.length > 0 ? availabilityKeys[0] : "Flexible";
+      const profile = Array.isArray(provider.profile)
+        ? provider.profile[0]
+        : provider.profile;
 
-      const mappedProviders: Provider[] = (data ?? []).map((provider) => {
-        const serviceArea = provider.service_areas?.join(", ") ?? "Local area";
-        const availabilityKeys = provider.availability
-          ? Object.keys(provider.availability)
-          : [];
-        const nextAvailable =
-          availabilityKeys.length > 0 ? availabilityKeys[0] : "Flexible";
-        const profile = Array.isArray(provider.profile)
-          ? provider.profile[0]
-          : provider.profile;
-
-        return {
-          id: provider.user_id,
-          name: profile?.full_name ?? "Service Provider",
-          businessName:
-            provider.business_name ?? profile?.full_name ?? "Service Provider",
-          rating: provider.rating ?? 0,
-          totalReviews: provider.total_reviews ?? 0,
-          completedJobs: provider.jobs_completed ?? 0,
-          hourlyRate: provider.hourly_rate ?? 0,
-          avatar: profile?.avatar_url ?? "",
-          services: provider.services ?? [],
-          serviceArea,
-          responseTime: "< 2 hours",
-          verified: provider.verification_status === "approved",
-          available: availabilityKeys.length > 0,
-          bio: provider.bio ?? "",
-          nextAvailable,
-        };
-      });
-
-      setProviders(mappedProviders);
-      setIsLoading(false);
-    };
-
-    fetchProviders();
-  }, []);
+      return {
+        id: provider.user_id,
+        name: profile?.full_name ?? "Service Provider",
+        businessName:
+          provider.business_name ?? profile?.full_name ?? "Service Provider",
+        rating: provider.rating ?? 0,
+        totalReviews: provider.total_reviews ?? 0,
+        completedJobs: provider.jobs_completed ?? 0,
+        hourlyRate: provider.hourly_rate ?? 0,
+        avatar: profile?.avatar_url ?? "",
+        services: provider.services ?? [],
+        serviceArea,
+        responseTime: "< 2 hours",
+        verified: provider.verification_status === "approved",
+        available: availabilityKeys.length > 0,
+        bio: provider.bio ?? "",
+        nextAvailable,
+      };
+    });
+  }, [rawResult?.data]);
 
   const filteredProviders = useMemo(
     () =>
@@ -144,7 +165,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
           );
 
         const matchesCategory =
-          selectedCategory === ALL_SERVICES_CATEGORY ||
+          selectedCategory === ALL_SERVICES_LABEL ||
           provider.services.some((s) =>
             s.toLowerCase().includes(selectedCategory.toLowerCase()),
           );
@@ -166,127 +187,197 @@ export function ProviderSearch({}: ProviderSearchProps) {
     [providers, searchQuery, selectedCategory, filters],
   );
 
+  const renderSkeletonCard = () => (
+    <Card className="border-border bg-card">
+      <CardContent className="pt-6">
+        <div className="flex items-start gap-4">
+          <Skeleton className="h-20 w-20 rounded-full flex-shrink-0" />
+          <div className="flex-1 space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-48" />
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-14 rounded-full" />
+            </div>
+            <Skeleton className="h-10 w-full" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 flex-1 rounded-md" />
+              <Skeleton className="h-9 flex-1 rounded-md" />
+              <Skeleton className="h-9 w-24 rounded-md" />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const renderProviderCard = (provider: Provider) => (
     <Card
       key={provider.id}
-      className="border-border bg-card transition-shadow hover:shadow-md"
+      className="border-border bg-card transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
     >
       <CardContent className="pt-6">
-        <div className="flex items-start gap-4">
-          <Avatar className="h-20 w-20 flex-shrink-0">
-            <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-              {provider.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </AvatarFallback>
-          </Avatar>
+        <div className="flex items-start gap-5">
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-20 w-20">
+              {provider.avatar && (
+                <AvatarImage src={provider.avatar} alt={provider.name} />
+              )}
+              <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
+                {provider.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+            {provider.available && (
+              <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-green-500 ring-2 ring-card" />
+            )}
+          </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-xl text-foreground">
-                    {provider.name}
-                  </h3>
-                  {provider.verified && (
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {provider.businessName}
-                </p>
+            {/* Name + Badge row */}
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-lg text-foreground leading-tight">
+                  {provider.name}
+                </h3>
+                {provider.verified && (
+                  <CheckCircle className="h-4.5 w-4.5 text-primary flex-shrink-0" />
+                )}
               </div>
-              {provider.available && (
-                <Badge
-                  variant="outline"
-                  className="border-primary/30 bg-primary/5 text-primary"
-                >
-                  Available Now
-                </Badge>
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {provider.available ? (
+                  <Badge className="bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/10 text-xs">
+                    Available Now
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Unavailable
+                  </Badge>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mb-3">
+            {/* Rate prominent display */}
+            <p className="text-2xl font-bold text-primary mb-3">
+              ${provider.hourlyRate}
+              <span className="text-sm font-normal text-muted-foreground">
+                /hr
+              </span>
+            </p>
+
+            {/* Rating + jobs row */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
-                    className={`h-4 w-4 ${star <= Math.floor(provider.rating) ? "fill-primary text-primary" : "text-muted-foreground/40"}`}
+                    className={`h-3.5 w-3.5 ${star <= Math.floor(provider.rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30 fill-muted-foreground/30"}`}
                   />
                 ))}
-                <span className="ml-1 font-bold text-foreground">
-                  {provider.rating}
+                <span className="ml-1 text-sm font-semibold text-foreground">
+                  {provider.rating > 0 ? provider.rating.toFixed(1) : "New"}
                 </span>
-                <span className="text-sm text-muted-foreground">
-                  ({provider.totalReviews} reviews)
-                </span>
+                {provider.totalReviews > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    ({provider.totalReviews})
+                  </span>
+                )}
               </div>
-              <span className="text-sm text-muted-foreground">•</span>
-              <span className="text-sm text-muted-foreground">
-                {provider.completedJobs} jobs completed
+              <span className="text-muted-foreground/40 text-xs">•</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Briefcase className="h-3 w-3" />
+                {provider.completedJobs} jobs
+              </span>
+              <span className="text-muted-foreground/40 text-xs">•</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {provider.responseTime}
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-3">
-              {provider.services.map((service) => (
-                <Badge key={service} variant="secondary">
+            {/* Services */}
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {provider.services.slice(0, 4).map((service) => (
+                <Badge
+                  key={service}
+                  variant="secondary"
+                  className="text-xs px-2 py-0.5"
+                >
                   {service}
                 </Badge>
               ))}
+              {provider.services.length > 4 && (
+                <Badge
+                  variant="outline"
+                  className="text-xs px-2 py-0.5 text-muted-foreground"
+                >
+                  +{provider.services.length - 4} more
+                </Badge>
+              )}
             </div>
 
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-              {provider.bio}
-            </p>
+            {/* Bio */}
+            {provider.bio && (
+              <p className="text-sm text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
+                {provider.bio}
+              </p>
+            )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <DollarSign className="h-4 w-4" />
-                <span>
-                  <strong>${provider.hourlyRate}/hr</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Responds in {provider.responseTime}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span className="break-words">{provider.serviceArea}</span>
-              </div>
-              <div className="flex items-center gap-2 text-primary">
-                <CheckCircle className="h-4 w-4" />
-                <span>Next: {provider.nextAvailable}</span>
-              </div>
+            {/* Location */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
+              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate">{provider.serviceArea}</span>
             </div>
 
+            {/* Action buttons */}
             <div className="flex flex-wrap gap-2">
               <Button
-                onClick={() =>
-                  navigate("/dashboard/client/providers/profile", {
-                    state: { providerId: provider.id },
-                  })
-                }
-                className="w-full sm:flex-1 sm:w-auto"
-              >
-                View Profile
-              </Button>
-              <Button
+                size="sm"
                 onClick={() =>
                   navigate("/dashboard/client/booking", {
                     state: { providerId: provider.id },
                   })
                 }
-                variant="default"
-                className="w-full sm:flex-1 sm:w-auto"
+                className="flex-1 sm:flex-none"
               >
                 Book Now
               </Button>
               <Button
+                size="sm"
                 variant="outline"
-                onClick={() => alert("Message feature coming soon!")}
-                className="w-full sm:w-auto border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                onClick={() =>
+                  navigate("/dashboard/client/providers/profile", {
+                    state: { providerId: provider.id },
+                  })
+                }
+                className="flex-1 sm:flex-none"
+              >
+                View Profile
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  navigate("/dashboard/client/messages", {
+                    state: {
+                      recipientId: provider.id,
+                      recipientName: provider.name,
+                    },
+                  })
+                }
+                className="flex-1 sm:flex-none text-primary hover:text-primary hover:bg-primary/10"
               >
                 Message
               </Button>
@@ -297,22 +388,58 @@ export function ProviderSearch({}: ProviderSearchProps) {
     </Card>
   );
 
+  const activeFilterCount = [
+    filters.minRating > 0,
+    filters.maxRate < 1000,
+    filters.availableNow,
+    filters.verifiedOnly,
+  ].filter(Boolean).length;
+
   return (
-    <div className="w-full overflow-hidden">
-      <div className="border-b py-10 -mx-6 lg:-mx-8 px-6 lg:px-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+    <div className="w-full min-w-0 py-6">
+      {/* Hero / Search header */}
+      <div className="border-b -mx-6 -mt-8 lg:-mx-8 px-6 lg:px-8 py-10 bg-gradient-to-b from-primary/5 to-transparent">
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">
             Find Local Service Providers
           </h1>
-          <p className="text-muted-foreground mb-6">
-            Search from {providers.length} verified professionals in your area
-          </p>
+        </div>
+        <p className="text-muted-foreground mb-6">
+          {isLoading
+            ? "Loading verified professionals near you..."
+            : `${providers.length} verified professionals available in your area`}
+        </p>
 
-          <Card className="border-border bg-card p-4 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* Stats row */}
+        <div className="flex flex-wrap gap-4 mb-6">
+          {[
+            {
+              icon: <Users className="h-4 w-4" />,
+              label: `${providers.length} Providers`,
+            },
+            {
+              icon: <CheckCircle className="h-4 w-4" />,
+              label: "All Verified",
+            },
+            { icon: <TrendingUp className="h-4 w-4" />, label: "Top Rated" },
+          ].map(({ icon, label }) => (
+            <div
+              key={label}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground bg-background/70 border border-border rounded-full px-3 py-1"
+            >
+              <span className="text-primary">{icon}</span>
+              {label}
+            </div>
+          ))}
+        </div>
+
+        {/* Search bar */}
+        <Card className="border-border bg-card shadow-sm">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div className="md:col-span-5">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search services or providers..."
                     value={searchQuery}
@@ -323,7 +450,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
               </div>
               <div className="md:col-span-4">
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Location"
                     value={location}
@@ -339,176 +466,221 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 </Button>
               </div>
             </div>
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Content */}
       <div className="py-8">
+        {/* Category pills */}
         <div className="mb-8">
-          <h2 className="mb-4 text-xl font-semibold text-foreground">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Browse by Category
           </h2>
-          <div className="pb-2 max-w-full">
-            <div className="flex flex-wrap gap-3">
-              {PROVIDER_SEARCH_CATEGORIES.map((category) => {
-                const isSelected = selectedCategory === category;
-                return (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`rounded-full border px-4 py-2 text-sm text-left whitespace-normal break-words transition-colors ${
-                      isSelected
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                    }`}
-                  >
-                    {category}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {categoryNamesWithAll.map((category) => {
+              const isSelected = selectedCategory === category;
+              return (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all duration-150 ${
+                    isSelected
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
+                  }`}
+                >
+                  {CATEGORY_ICONS[category]}
+                  {category}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Filters and Results */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1">
+          {/* Filter sidebar */}
+          <div className="lg:col-span-1 self-start sticky top-4">
             <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filters
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-base">
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filters
+                  </span>
+                  {activeFilterCount > 0 && (
+                    <Badge className="h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+
+              <CardContent className="space-y-5 pt-0">
                 <div>
-                  <label className="mb-2 block text-sm font-medium">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
                     Minimum Rating
                   </label>
-                  <select
-                    value={filters.minRating}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        minRating: Number(e.target.value),
-                      })
+                  <Select
+                    value={String(filters.minRating)}
+                    onValueChange={(v) =>
+                      setFilters({ ...filters, minRating: Number(v) })
                     }
-                    className="w-full rounded-md border border-border bg-background p-2"
                   >
-                    <option value={0}>Any Rating</option>
-                    <option value={4}>4+ Stars</option>
-                    <option value={4.5}>4.5+ Stars</option>
-                    <option value={4.8}>4.8+ Stars</option>
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Any Rating" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Any Rating</SelectItem>
+                      <SelectItem value="4">4+ Stars</SelectItem>
+                      <SelectItem value="4.5">4.5+ Stars</SelectItem>
+                      <SelectItem value="4.8">4.8+ Stars</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
+                <Separator />
+
                 <div>
-                  <label className="mb-2 block text-sm font-medium">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
                     Max Hourly Rate
                   </label>
-                  <Input
-                    type="number"
-                    value={filters.maxRate}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        maxRate: Number(e.target.value),
-                      })
-                    }
-                    placeholder="Max $"
-                  />
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={filters.maxRate}
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          maxRate: Number(e.target.value),
+                        })
+                      }
+                      placeholder="1000"
+                      className="pl-9"
+                    />
+                  </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Current: ${filters.maxRate}/hr
+                    Up to ${filters.maxRate}/hr
                   </p>
                 </div>
 
+                <Separator />
+
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Available Now</label>
-                  <input
-                    type="checkbox"
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Available Now
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Show only online
+                    </p>
+                  </div>
+                  <Switch
                     checked={filters.availableNow}
-                    onChange={(e) =>
-                      setFilters({ ...filters, availableNow: e.target.checked })
+                    onCheckedChange={(checked) =>
+                      setFilters({ ...filters, availableNow: checked })
                     }
-                    className="h-5 w-5"
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Verified Only</label>
-                  <input
-                    type="checkbox"
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Verified Only
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Background checked
+                    </p>
+                  </div>
+                  <Switch
                     checked={filters.verifiedOnly}
-                    onChange={(e) =>
-                      setFilters({ ...filters, verifiedOnly: e.target.checked })
+                    onCheckedChange={(checked) =>
+                      setFilters({ ...filters, verifiedOnly: checked })
                     }
-                    className="h-5 w-5"
                   />
                 </div>
 
-                <Button
-                  variant="outline"
-                  className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-                  onClick={() =>
-                    setFilters({
-                      minRating: 0,
-                      maxRate: 1000,
-                      availableNow: false,
-                      verifiedOnly: false,
-                    })
-                  }
-                >
-                  Reset Filters
-                </Button>
+                {activeFilterCount > 0 && (
+                  <>
+                    <Separator />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-muted-foreground hover:text-foreground"
+                      onClick={() =>
+                        setFilters({
+                          minRating: 0,
+                          maxRate: 1000,
+                          availableNow: false,
+                          verifiedOnly: false,
+                        })
+                      }
+                    >
+                      Clear Filters
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
 
+          {/* Results */}
           <div className="lg:col-span-3">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">
-                  {filteredProviders.length} Providers Found
+                <h2 className="text-xl font-bold text-foreground">
+                  {isLoading ? (
+                    <Skeleton className="h-6 w-40 inline-block" />
+                  ) : (
+                    <>
+                      {filteredProviders.length}{" "}
+                      <span className="font-normal text-muted-foreground text-base">
+                        provider{filteredProviders.length !== 1 ? "s" : ""}{" "}
+                        found
+                      </span>
+                    </>
+                  )}
                 </h2>
-                <p className="text-muted-foreground">
-                  Showing results for "{selectedCategory}" in {location}
-                </p>
+                {/* <p className="text-sm text-muted-foreground mt-0.5">
+                  {selectedCategory} · {location}
+                </p> */}
               </div>
             </div>
 
-            {errorMessage && (
-              <Card className="mb-6">
-                <CardContent className="py-6">
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                    {errorMessage}
-                  </div>
-                </CardContent>
-              </Card>
+            {error && (
+              <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {(error as { message?: string }).message ??
+                  "Failed to load providers."}
+              </div>
             )}
 
-            {isLoading && (
-              <Card className="mb-6">
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Loading providers...
-                </CardContent>
-              </Card>
-            )}
-
-            {filteredProviders.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i}>{renderSkeletonCard()}</div>
+                ))}
+              </div>
+            ) : filteredProviders.length === 0 ? (
               <Card>
-                <CardContent className="py-12 text-center">
-                  <Search className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                  <h3 className="mb-2 text-xl font-bold text-foreground">
+                <CardContent className="py-16 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                    <Search className="h-7 w-7 text-muted-foreground" />
+                  </div>
+                  <h3 className="mb-1 text-lg font-semibold text-foreground">
                     No providers found
                   </h3>
-                  <p className="mb-4 text-muted-foreground">
-                    Try adjusting your filters or search criteria
+                  <p className="mb-5 text-sm text-muted-foreground max-w-xs mx-auto">
+                    Try broadening your search or adjusting your filters to see
+                    more results.
                   </p>
                   <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setSearchQuery("");
-                      setSelectedCategory(ALL_SERVICES_CATEGORY);
+                      setSelectedCategory(ALL_SERVICES_LABEL);
                       setFilters({
                         minRating: 0,
                         maxRate: 1000,

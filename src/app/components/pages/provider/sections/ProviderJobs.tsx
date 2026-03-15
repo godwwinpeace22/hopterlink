@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@/lib/router";
 // import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/components/ui/card";
+import { PageHeader } from "@/app/components/ui/page-header";
 import {
   Tabs,
   TabsContent,
@@ -238,26 +239,11 @@ export const ProviderJobs = () => {
   const handleStartFromQuote = async (quote: any) => {
     const bookingId = quote.bookingId ?? (await resolveBookingId(quote.id));
     if (!bookingId) return;
-    const { data: bookingData, error } = await supabase
-      .from("bookings")
-      .select("job_id")
-      .eq("id", bookingId)
-      .maybeSingle();
+
+    const { error } = await supabase.rpc("start_booking", {
+      p_booking_id: bookingId,
+    });
     if (error) return;
-
-    const { error: bookingError } = await supabase
-      .from("bookings")
-      .update({ status: "in_progress", started_at: new Date().toISOString() })
-      .eq("id", bookingId)
-      .eq("provider_id", user?.id ?? "");
-    if (bookingError) return;
-
-    if (bookingData?.job_id) {
-      await supabase
-        .from("jobs")
-        .update({ status: "in_progress" })
-        .eq("id", bookingData.job_id);
-    }
 
     await Promise.all([refetchBookings(), refetchQuotes()]);
     setActiveTab("in-progress");
@@ -266,38 +252,11 @@ export const ProviderJobs = () => {
   const handleCompleteFromQuote = async (quote: any) => {
     const bookingId = quote.bookingId ?? (await resolveBookingId(quote.id));
     if (!bookingId) return;
-    const { data: bookingData, error } = await supabase
-      .from("bookings")
-      .select("job_id")
-      .eq("id", bookingId)
-      .maybeSingle();
+
+    const { error } = await supabase.rpc("complete_booking", {
+      p_booking_id: bookingId,
+    });
     if (error) return;
-
-    const { error: bookingError } = await supabase
-      .from("bookings")
-      .update({ status: "completed", completed_at: new Date().toISOString() })
-      .eq("id", bookingId)
-      .eq("provider_id", user?.id ?? "");
-    if (bookingError) return;
-
-    await supabase
-      .from("escrow_payments")
-      .update({ status: "released", released_at: new Date().toISOString() })
-      .eq("booking_id", bookingId)
-      .eq("provider_id", user?.id ?? "");
-
-    await supabase
-      .from("bookings")
-      .update({ payment_status: "released" })
-      .eq("id", bookingId)
-      .eq("provider_id", user?.id ?? "");
-
-    if (bookingData?.job_id) {
-      await supabase
-        .from("jobs")
-        .update({ status: "completed" })
-        .eq("id", bookingData.job_id);
-    }
 
     await Promise.all([refetchBookings(), refetchQuotes()]);
     setActiveTab("completed");
@@ -305,19 +264,11 @@ export const ProviderJobs = () => {
 
   const handleStartFromJob = async (job: any) => {
     if (!job?.id) return;
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "in_progress", started_at: new Date().toISOString() })
-      .eq("id", job.id)
-      .eq("provider_id", user?.id ?? "");
-    if (error) return;
 
-    if (job.jobId) {
-      await supabase
-        .from("jobs")
-        .update({ status: "in_progress" })
-        .eq("id", job.jobId);
-    }
+    const { error } = await supabase.rpc("start_booking", {
+      p_booking_id: job.id,
+    });
+    if (error) return;
 
     await Promise.all([refetchBookings(), refetchQuotes()]);
     setActiveTab("in-progress");
@@ -325,67 +276,38 @@ export const ProviderJobs = () => {
 
   const handleCompleteFromJob = async (job: any) => {
     if (!job?.id) return;
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "completed", completed_at: new Date().toISOString() })
-      .eq("id", job.id)
-      .eq("provider_id", user?.id ?? "");
+
+    const { error } = await supabase.rpc("complete_booking", {
+      p_booking_id: job.id,
+    });
     if (error) return;
-
-    await supabase
-      .from("escrow_payments")
-      .update({ status: "released", released_at: new Date().toISOString() })
-      .eq("booking_id", job.id)
-      .eq("provider_id", user?.id ?? "");
-
-    await supabase
-      .from("bookings")
-      .update({ payment_status: "released" })
-      .eq("id", job.id)
-      .eq("provider_id", user?.id ?? "");
-
-    if (job.jobId) {
-      await supabase
-        .from("jobs")
-        .update({ status: "completed" })
-        .eq("id", job.jobId);
-    }
 
     await Promise.all([refetchBookings(), refetchQuotes()]);
     setActiveTab("completed");
   };
 
   const handleAcceptBooking = async (bookingId: string) => {
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
-      .eq("id", bookingId)
-      .eq("provider_id", user?.id ?? "");
+    const { error } = await supabase.rpc("confirm_booking", {
+      p_booking_id: bookingId,
+    });
     if (error) return;
     await Promise.all([refetchBookings(), refetchQuotes()]);
     setActiveTab("upcoming");
   };
 
   const handleDeclineBooking = async (bookingId: string) => {
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-      .eq("id", bookingId)
-      .eq("provider_id", user?.id ?? "");
+    const { error } = await supabase.rpc("decline_booking", {
+      p_booking_id: bookingId,
+    });
     if (error) return;
     await Promise.all([refetchBookings(), refetchQuotes()]);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
+      <PageHeader title="My Jobs" hideBack />
       <Card className="border border-gray-200/80 bg-white">
-        <CardHeader className="">
-          <CardTitle className="tracking-tight">My Jobs</CardTitle>
-          <CardDescription>
-            Manage your accepted and active jobs
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}
@@ -539,7 +461,7 @@ export const ProviderJobs = () => {
                     normalizedStatus === "completed"
                       ? "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 border-green-200"
                       : normalizedStatus === "in progress"
-                        ? "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 border-blue-200"
+                        ? "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-[#FFF1D6] text-[#A15C00] border-[#F7C876]"
                         : normalizedStatus === "accepted"
                           ? "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700 border-green-200"
                           : normalizedStatus === "rejected"
@@ -605,7 +527,7 @@ export const ProviderJobs = () => {
                                 Quote: ${quote.amount}
                               </span>
                               {quote.budget && (
-                                <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                                <span className="inline-flex items-center rounded-full bg-[#FFF7E8] px-3 py-1 text-sm font-semibold text-[#A15C00]">
                                   Budget: ${quote.budget}
                                 </span>
                               )}
@@ -640,7 +562,19 @@ export const ProviderJobs = () => {
                                 variant="outline"
                                 className="hover:border-[#F7C876]"
                                 onClick={() =>
-                                  navigate("/dashboard/provider/messages")
+                                  navigate("/dashboard/provider/messages", {
+                                    state: {
+                                      recipientId: quote.clientId,
+                                      recipientName: quote.clientName,
+                                      bookingId: quote.bookingId,
+                                      jobId: quote.jobId,
+                                      contextLabel: quote.bookingId
+                                        ? `Booking: ${quote.jobTitle}`
+                                        : quote.jobId
+                                          ? `Job: ${quote.jobTitle}`
+                                          : null,
+                                    },
+                                  })
                                 }
                               >
                                 Message Client
@@ -663,7 +597,7 @@ export const ProviderJobs = () => {
                 status === "upcoming"
                   ? "bg-[#FDEFD6] text-[#F1A400] border-[#F7C876]"
                   : status === "in-progress"
-                    ? "bg-blue-100 text-blue-700 border-blue-200"
+                    ? "bg-[#FFF1D6] text-[#A15C00] border-[#F7C876]"
                     : "bg-green-100 text-green-700 border-green-200";
 
               return (
@@ -774,7 +708,15 @@ export const ProviderJobs = () => {
                                 variant="outline"
                                 className="hover:border-[#F7C876]"
                                 onClick={() =>
-                                  navigate("/dashboard/provider/messages")
+                                  navigate("/dashboard/provider/messages", {
+                                    state: {
+                                      recipientId: job.clientId,
+                                      recipientName: job.client,
+                                      bookingId: job.id,
+                                      jobId: job.jobId,
+                                      contextLabel: `Booking: ${job.service}`,
+                                    },
+                                  })
                                 }
                               >
                                 Contact Client

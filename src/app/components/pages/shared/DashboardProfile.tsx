@@ -1,20 +1,29 @@
 import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/app/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
+import { useNavigate } from "@/lib/router";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@/app/components/ui/avatar";
-import { Badge } from "@/app/components/ui/badge";
+import { Card, CardContent } from "@/app/components/ui/card";
+import { Separator } from "@/app/components/ui/separator";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/app/components/ui/card";
-import { Star } from "lucide-react";
+  Bell,
+  Briefcase,
+  Calendar,
+  ChevronRight,
+  HelpCircle,
+  LogOut,
+  MapPin,
+  Phone,
+  Settings,
+  Star,
+  User,
+} from "lucide-react";
 
 const getInitials = (name: string) => {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -23,13 +32,6 @@ const getInitials = (name: string) => {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
-};
-
-const formatDate = (value?: string | null) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString();
 };
 
 const getLocationLabel = (location: unknown) => {
@@ -42,10 +44,11 @@ const getLocationLabel = (location: unknown) => {
 };
 
 export const DashboardProfile = () => {
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, signOut } = useAuth();
   const role = activeRole;
+  const navigate = useNavigate();
 
-  const { data: profileResult, isLoading: isProfileLoading } = useSupabaseQuery(
+  const { data: profileResult } = useSupabaseQuery(
     ["dashboard_profile", user?.id],
     () =>
       supabase
@@ -67,47 +70,6 @@ export const DashboardProfile = () => {
         .eq("user_id", user?.id ?? "")
         .maybeSingle(),
     { enabled: Boolean(user?.id) && role === "provider" },
-  );
-
-  const { data: bookingsResult } = useSupabaseQuery(
-    ["dashboard_profile_bookings", user?.id, role],
-    () =>
-      supabase
-        .from("bookings")
-        .select(
-          `
-          id,
-          scheduled_date,
-          status,
-          amount,
-          location,
-          service_type,
-          client:profiles!bookings_client_id_fkey (
-            id,
-            full_name
-          ),
-          provider:profiles!bookings_provider_id_fkey (
-            id,
-            full_name
-          )
-        `,
-        )
-        .eq(role === "provider" ? "provider_id" : "client_id", user?.id ?? "")
-        .order("scheduled_date", { ascending: false })
-        .limit(5),
-    { enabled: Boolean(user?.id) && Boolean(role) },
-  );
-
-  const { data: jobsResult } = useSupabaseQuery(
-    ["dashboard_profile_jobs", user?.id],
-    () =>
-      supabase
-        .from("jobs")
-        .select("id, title, category, status, created_at, location")
-        .eq("client_id", user?.id ?? "")
-        .order("created_at", { ascending: false })
-        .limit(5),
-    { enabled: Boolean(user?.id) && role === "client" },
   );
 
   const { data: reviewsResult } = useSupabaseQuery(
@@ -133,6 +95,17 @@ export const DashboardProfile = () => {
     { enabled: Boolean(user?.id) },
   );
 
+  const { data: bookingsCountResult } = useSupabaseQuery(
+    ["dashboard_profile_bookings_count", user?.id, role],
+    () =>
+      supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq(role === "provider" ? "provider_id" : "client_id", user?.id ?? "")
+        .eq("status", "completed"),
+    { enabled: Boolean(user?.id) && Boolean(role) },
+  );
+
   const displayName =
     profileResult?.data?.full_name ??
     (user?.user_metadata?.full_name as string | undefined) ??
@@ -145,167 +118,168 @@ export const DashboardProfile = () => {
     ? new Date(profileResult.data.created_at).getFullYear()
     : null;
   const location = getLocationLabel(profileResult?.data?.location);
+  const phone = profileResult?.data?.phone ?? "";
+  const email = profileResult?.data?.email ?? user?.email ?? "";
+  const completedJobs = bookingsCountResult?.count ?? 0;
 
   const rating = useMemo(() => {
     const providerRating = providerProfileResult?.data?.rating;
     if (typeof providerRating === "number" && providerRating > 0) {
       return providerRating;
     }
-    const reviews = reviewsResult?.data ?? [];
-    if (reviews.length === 0) return 0;
-    const total = reviews.reduce(
-      (sum, review) => sum + (review.rating ?? 0),
-      0,
-    );
-    return Number((total / reviews.length).toFixed(1));
+    const list = reviewsResult?.data ?? [];
+    if (list.length === 0) return 0;
+    const total = list.reduce((sum, r) => sum + (r.rating ?? 0), 0);
+    return Number((total / list.length).toFixed(1));
   }, [providerProfileResult, reviewsResult]);
 
-  const jobs = useMemo(() => {
-    if (role === "client") {
-      return (jobsResult?.data ?? []).map((job) => ({
-        id: job.id,
-        title: job.title ?? "Job",
-        subtitle: job.category ?? "",
-        status: job.status ?? "",
-        date: formatDate(job.created_at),
-        location: getLocationLabel(job.location),
-      }));
-    }
+  const menuItems = [
+    {
+      icon: Briefcase,
+      label: role === "provider" ? "My Jobs" : "My Jobs",
+      onClick: () =>
+        navigate(
+          role === "provider"
+            ? "/dashboard/provider/jobs"
+            : "/dashboard/client/my-jobs",
+        ),
+    },
 
-    return (bookingsResult?.data ?? []).map((booking) => {
-      const client = Array.isArray(booking.client)
-        ? booking.client[0]
-        : booking.client;
-      return {
-        id: booking.id,
-        title: booking.service_type ?? "Service",
-        subtitle: client?.full_name ?? "Client",
-        status: booking.status ?? "",
-        date: formatDate(booking.scheduled_date),
-        location: getLocationLabel(booking.location),
-      };
-    });
-  }, [role, bookingsResult, jobsResult]);
+    {
+      icon: Star,
+      label: "Reviews",
+      onClick: () =>
+        navigate(
+          role === "provider"
+            ? "/dashboard/provider/reviews"
+            : "/dashboard/client/reviews",
+        ),
+    },
+    {
+      icon: Settings,
+      label: "Settings",
+      onClick: () =>
+        navigate(
+          role === "provider"
+            ? "/dashboard/provider/settings"
+            : "/dashboard/client/settings",
+        ),
+    },
+    {
+      icon: HelpCircle,
+      label: "Help & Support",
+      onClick: () => navigate("/help"),
+    },
+  ];
 
-  const reviews = useMemo(() => {
-    return (reviewsResult?.data ?? []).map((review) => {
-      const reviewer = Array.isArray(review.reviewer)
-        ? review.reviewer[0]
-        : review.reviewer;
-      return {
-        id: review.id,
-        name: reviewer?.full_name ?? "Reviewer",
-        rating: review.rating ?? 0,
-        comment: review.comment ?? "",
-        date: formatDate(review.created_at),
-      };
-    });
-  }, [reviewsResult]);
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                {avatarUrl && <AvatarImage src={avatarUrl} />}
-                <AvatarFallback className="bg-blue-600 text-white text-lg">
-                  {getInitials(displayName || "User")}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {displayName || "Profile"}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {role === "provider" ? "Provider" : "Client"}
-                  {memberSince ? ` • Member since ${memberSince}` : ""}
-                </p>
-                {location && (
-                  <p className="text-sm text-gray-500">{location}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-semibold text-gray-900">
-                  {rating || "—"}
-                </span>
-              </div>
-              <Badge className="bg-blue-50 text-blue-700 border-blue-100">
-                Rating
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-5 pt-6 max-w-2xl">
+      {/* Hero Card */}
+      <div className="relative overflow-hidden rounded-2xl border border-[#F7C876]/60 bg-white px-6 py-7 shadow-sm shadow-[#F7C876]/10">
+        {/* Glow orbs */}
+        <div className="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full bg-[#F1A400]/[0.07]" />
+        <div className="pointer-events-none absolute -bottom-12 -left-5 h-36 w-36 rounded-full bg-[#F1A400]/[0.04]" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {role === "client" ? "Recent Jobs" : "Recent Jobs"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isProfileLoading && (
-            <p className="text-sm text-gray-600">Loading profile...</p>
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2 min-w-0">
+            {/* Role pill */}
+            <span className="inline-flex w-fit items-center rounded-full border border-[#F1A400]/20 bg-[#F1A400]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#C17A00]">
+              {role === "provider" ? "Provider Account" : "Client Account"}
+            </span>
+
+            <h2 className="text-2xl font-bold text-slate-950 leading-tight">
+              {displayName || "User"}
+            </h2>
+
+            <p className="text-sm text-slate-500">{email}</p>
+
+            <p className="mt-1 max-w-xs text-sm leading-relaxed text-slate-500">
+              {role === "client"
+                ? "Manage your bookings, notifications and support preferences in one place."
+                : "Manage your services, bookings, and client interactions."}
+            </p>
+          </div>
+
+          <Avatar className="h-20 w-20 shrink-0 border-2 border-[#F7C876]/50">
+            {avatarUrl && <AvatarImage src={avatarUrl} />}
+            <AvatarFallback className="bg-[#F1A400] text-white text-xl font-bold">
+              {getInitials(displayName || "User")}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+
+        {/* Info row */}
+        <div className="relative mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#F7C876]/40 pt-4 text-sm text-slate-500">
+          {memberSince && (
+            <span className="flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5 text-[#C17A00]" />
+              Member since {memberSince}
+            </span>
           )}
-          {!isProfileLoading && jobs.length === 0 && (
-            <p className="text-sm text-gray-500">No jobs found.</p>
+          {location && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-[#C17A00]" />
+              {location}
+            </span>
           )}
-          {jobs.map((job) => (
-            <div
-              key={job.id}
-              className="flex flex-col gap-1 rounded-lg border border-gray-100 p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold text-gray-900">{job.title}</h3>
-                <Badge className="bg-gray-100 text-gray-700 border-gray-200">
-                  {job.status?.replace("_", " ")}
-                </Badge>
-              </div>
-              <p className="text-sm text-gray-600">{job.subtitle}</p>
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                <span>{job.date}</span>
-                {job.location && <span>{job.location}</span>}
-              </div>
+          {phone && (
+            <span className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5 text-[#C17A00]" />
+              {phone}
+            </span>
+          )}
+          {rating > 0 && (
+            <span className="flex items-center gap-1.5">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+              {rating} rating
+            </span>
+          )}
+          {completedJobs > 0 && (
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-[#C17A00]" />
+              {completedJobs} completed
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Nav Menu Card */}
+      <Card className="overflow-hidden border-[#F3E4BE]">
+        <CardContent className="p-0">
+          {menuItems.map((item, index) => (
+            <div key={item.label}>
+              <button
+                onClick={item.onClick}
+                className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-[#FFF7E8] cursor-pointer"
+              >
+                <item.icon className="h-5 w-5 text-slate-500 shrink-0" />
+                <span className="flex-1 text-sm font-medium text-slate-900">
+                  {item.label}
+                </span>
+                <ChevronRight className="h-4 w-4 text-slate-400" />
+              </button>
+              {index < menuItems.length - 1 && (
+                <Separator className="ml-[52px] bg-slate-100" />
+              )}
             </div>
           ))}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Reviews</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {reviews.length === 0 ? (
-            <p className="text-sm text-gray-500">No reviews yet.</p>
-          ) : (
-            reviews.map((review) => (
-              <div
-                key={review.id}
-                className="rounded-lg border border-gray-100 p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-gray-900">{review.name}</p>
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    {review.rating}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">{review.comment}</p>
-                <p className="text-xs text-gray-400">{review.date}</p>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      {/* Sign Out */}
+      <Button
+        variant="outline"
+        className="w-full gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+        onClick={handleSignOut}
+      >
+        <LogOut className="h-4 w-4" />
+        Sign Out
+      </Button>
     </div>
   );
 };

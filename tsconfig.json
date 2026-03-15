@@ -20,6 +20,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
+    /* Bun test types */
+    "types": ["bun-types"],
+
     /* Path aliases */
     "baseUrl": ".",
     "paths": {

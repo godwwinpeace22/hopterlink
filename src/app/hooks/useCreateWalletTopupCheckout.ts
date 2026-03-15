@@ -5,6 +5,8 @@ export type CreateWalletTopupCheckoutPayload = {
   amountCents: number;
   currency: string;
   idempotencyKey: string;
+  successUrl?: string;
+  cancelUrl?: string;
 };
 
 export type CreateWalletTopupCheckoutResult = {

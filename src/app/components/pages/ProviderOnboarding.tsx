@@ -1,212 +1,294 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import {
-  CheckCircle2,
-  Upload,
-  Camera,
+  AlertCircle,
+  Briefcase,
   Calendar,
+  Camera,
+  CheckCircle2,
   CreditCard,
   Shield,
-  Clock,
-  Briefcase,
-  AlertCircle,
+  Upload,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProviderOnboardingBootstrap } from "@/app/hooks/useProviderOnboardingBootstrap";
+import {
+  useProviderOnboardingBootstrap,
+  type ProviderOnboardingDocument,
+} from "@/app/hooks/useProviderOnboardingBootstrap";
+import {
+  PROVIDER_ONBOARDING_WEEKDAYS,
+  buildProviderPayoutMetadataPatch,
+  buildWeeklyAvailability,
+  getSelectedWeekdaysFromAvailability,
+  type ProviderOnboardingStep,
+  type ProviderOnboardingWeekday,
+} from "@/lib/providerOnboarding";
 
-// Availability Calendar Component
-interface AvailabilityCalendarProps {
-  availability: Record<string, boolean>;
-  setAvailability: (val: Record<string, boolean>) => void;
-}
+const WEEKDAY_LABELS: Record<ProviderOnboardingWeekday, string> = {
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+  sunday: "Sun",
+};
 
-function AvailabilityCalendar({
-  availability,
-  setAvailability,
-}: AvailabilityCalendarProps) {
-  const generateNext14Days = () => {
-    const days = [];
-    const today = new Date();
+const STEP_ORDER: ProviderOnboardingStep[] = [
+  "email-verify",
+  "documents",
+  "profile",
+  "availability",
+  "payment",
+  "review",
+  "pending",
+];
 
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      days.push(date);
-    }
+const STEP_CONFIG = [
+  { id: "email-verify", label: "Verify Email", icon: Shield },
+  { id: "documents", label: "Documents", icon: Upload },
+  { id: "profile", label: "Profile Setup", icon: Briefcase },
+  { id: "availability", label: "Availability", icon: Calendar },
+  { id: "payment", label: "Payment", icon: CreditCard },
+  { id: "review", label: "Review", icon: CheckCircle2 },
+] as const;
 
-    return days;
-  };
+const documentStatusClass: Record<string, string> = {
+  approved: "bg-green-100 text-green-700",
+  pending: "bg-amber-100 text-amber-700",
+  rejected: "bg-red-100 text-red-700",
+  expired: "bg-red-100 text-red-700",
+};
 
-  const days = generateNext14Days();
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+type OnboardingFiles = {
+  governmentId: File | null;
+  insurance: File | null;
+};
 
-  const toggleDay = (dateStr: string) => {
-    setAvailability({
-      ...availability,
-      [dateStr]: !availability[dateStr],
-    });
-  };
+type ProfileFormState = {
+  profilePhoto: File | null;
+  businessName: string;
+  services: string;
+  serviceAreas: string;
+  hourlyRate: string;
+  description: string;
+};
 
-  return (
-    <div className="border rounded-lg p-4">
-      <div className="grid grid-cols-7 gap-2">
-        {days.map((date, index) => {
-          const dateStr = date.toISOString().split("T")[0];
-          const isAvailable = availability[dateStr];
-          const dayName = dayNames[date.getDay()];
-          const dayNumber = date.getDate();
-
-          return (
-            <button
-              key={index}
-              type="button"
-              onClick={() => toggleDay(dateStr)}
-              className={`p-3 rounded-lg border-2 transition-all ${
-                isAvailable
-                  ? "bg-green-100 border-green-500 text-green-700"
-                  : "bg-white border-gray-200 text-gray-600 hover:border-blue-300"
-              }`}
-            >
-              <div className="text-xs font-semibold">{dayName}</div>
-              <div className="text-lg font-bold">{dayNumber}</div>
-              {isAvailable && <CheckCircle2 className="h-4 w-4 mx-auto mt-1" />}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-4 text-sm text-gray-600 text-center">
-        Click days to toggle availability •{" "}
-        {Object.keys(availability).filter((k) => availability[k]).length} days
-        selected
-      </div>
-    </div>
-  );
-}
-
-type OnboardingStep =
-  | "email-verify"
-  | "documents"
-  | "profile"
-  | "availability"
-  | "payment"
-  | "review"
-  | "pending";
+type PaymentFormState = {
+  bankName: string;
+  accountType: string;
+  accountNumber: string;
+};
 
 export function ProviderOnboarding() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, memberships, startRoleOnboarding } = useAuth();
+  const onboardingQuery = useProviderOnboardingBootstrap(user?.id);
+  const onboardingBootstrap = onboardingQuery.data;
+
   const [currentStep, setCurrentStep] =
-    useState<OnboardingStep>("email-verify");
-  const [emailVerified, setEmailVerified] = useState(false);
+    useState<ProviderOnboardingStep>("email-verify");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isInitializedFromBootstrap, setIsInitializedFromBootstrap] =
     useState(false);
-
-  const { data: onboardingBootstrap } = useProviderOnboardingBootstrap(
-    user?.id,
-  );
-
-  // Document upload state
-  const [documents, setDocuments] = useState({
-    governmentId: null as File | null,
-    insurance: null as File | null,
-    certifications: [] as File[],
+  const [documents, setDocuments] = useState<OnboardingFiles>({
+    governmentId: null,
+    insurance: null,
   });
-
-  // Profile state
-  const [profile, setProfile] = useState({
-    profilePhoto: null as File | null,
-    portfolioImages: [] as File[],
-    serviceAreas: [] as string[],
-    serviceRadius: "10",
+  const [profile, setProfile] = useState<ProfileFormState>({
+    profilePhoto: null,
+    businessName: "",
+    services: "",
+    serviceAreas: "",
     hourlyRate: "",
     description: "",
   });
-
-  // Availability state (simplified 2-week view)
-  const [availability, setAvailability] = useState<Record<string, boolean>>({});
-
-  // Payment state
-  const [payment, setPayment] = useState({
-    accountHolderName: "",
+  const [selectedDays, setSelectedDays] = useState<ProviderOnboardingWeekday[]>(
+    [],
+  );
+  const [payment, setPayment] = useState<PaymentFormState>({
     bankName: "",
+    accountType: "",
     accountNumber: "",
-    routingNumber: "",
-    accountType: "checking",
   });
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
-  const steps = [
-    { id: "email-verify", label: "Verify Email", icon: Shield },
-    { id: "documents", label: "Documents", icon: Upload },
-    { id: "profile", label: "Profile Setup", icon: Briefcase },
-    { id: "availability", label: "Availability", icon: Calendar },
-    { id: "payment", label: "Payment", icon: CreditCard },
-    { id: "review", label: "Review", icon: CheckCircle2 },
-  ];
+  const providerMembership = useMemo(
+    () => memberships.find((membership) => membership.role === "provider"),
+    [memberships],
+  );
+  const shouldRecordOnboardingStart =
+    providerMembership?.state == null ||
+    providerMembership.state === "not_started" ||
+    providerMembership.state === "rejected";
 
-  const getCurrentStepIndex = () => {
-    return steps.findIndex((s) => s.id === currentStep);
-  };
+  useEffect(() => {
+    setIsInitializedFromBootstrap(false);
+    setCurrentStep("email-verify");
+    setDocuments({ governmentId: null, insurance: null });
+    setProfile({
+      profilePhoto: null,
+      businessName: "",
+      services: "",
+      serviceAreas: "",
+      hourlyRate: "",
+      description: "",
+    });
+    setSelectedDays([]);
+    setPayment({ bankName: "", accountType: "", accountNumber: "" });
+    setErrorMessage(null);
+  }, [user?.id]);
 
-  const handleFileUpload = (field: string, file: File | null) => {
-    if (field === "governmentId" || field === "insurance") {
-      setDocuments({ ...documents, [field]: file });
-    } else if (field === "profilePhoto") {
-      setProfile({ ...profile, profilePhoto: file });
+  useEffect(() => {
+    if (!profile.profilePhoto) {
+      setAvatarPreviewUrl(onboardingBootstrap?.profile?.avatar_url ?? null);
+      return;
     }
-  };
 
-  const handleNext = () => {
-    const stepOrder: OnboardingStep[] = [
-      "email-verify",
-      "documents",
-      "profile",
-      "availability",
-      "payment",
-      "review",
-      "pending",
-    ];
-    const currentIndex = stepOrder.indexOf(currentStep);
-    if (currentIndex < stepOrder.length - 1) {
-      setCurrentStep(stepOrder[currentIndex + 1]);
-    }
-  };
-
-  const handleBack = () => {
-    const stepOrder: OnboardingStep[] = [
-      "email-verify",
-      "documents",
-      "profile",
-      "availability",
-      "payment",
-      "review",
-    ];
-    const currentIndex = stepOrder.indexOf(currentStep);
-    if (currentIndex > 0) {
-      setCurrentStep(stepOrder[currentIndex - 1]);
-    }
-  };
+    const nextUrl = URL.createObjectURL(profile.profilePhoto);
+    setAvatarPreviewUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [onboardingBootstrap?.profile?.avatar_url, profile.profilePhoto]);
 
   useEffect(() => {
     if (!onboardingBootstrap || isInitializedFromBootstrap) {
       return;
     }
 
-    if (onboardingBootstrap.emailVerified) {
-      setEmailVerified(true);
-    }
+    const payout =
+      onboardingBootstrap.profile?.metadata &&
+      typeof onboardingBootstrap.profile.metadata === "object" &&
+      !Array.isArray(onboardingBootstrap.profile.metadata)
+        ? ((onboardingBootstrap.profile.metadata as { payout?: unknown })
+            .payout as
+            | {
+                bankName?: string;
+                accountType?: string;
+                last4?: string;
+              }
+            | undefined)
+        : undefined;
 
     setCurrentStep(onboardingBootstrap.resumeStep);
+    setProfile((current) => ({
+      ...current,
+      businessName: onboardingBootstrap.providerProfile?.business_name ?? "",
+      services: (onboardingBootstrap.providerProfile?.services ?? []).join(
+        ", ",
+      ),
+      serviceAreas: (
+        onboardingBootstrap.providerProfile?.service_areas ?? []
+      ).join(", "),
+      hourlyRate:
+        onboardingBootstrap.providerProfile?.hourly_rate?.toString() ?? "",
+      description: onboardingBootstrap.providerProfile?.bio ?? "",
+    }));
+    setSelectedDays(
+      getSelectedWeekdaysFromAvailability(
+        onboardingBootstrap.providerProfile?.availability,
+      ),
+    );
+    setPayment({
+      bankName: payout?.bankName ?? "",
+      accountType: payout?.accountType ?? "",
+      accountNumber: payout?.last4 ?? "",
+    });
     setIsInitializedFromBootstrap(true);
-  }, [onboardingBootstrap, isInitializedFromBootstrap]);
+  }, [isInitializedFromBootstrap, onboardingBootstrap]);
+
+  const getCurrentStepIndex = () =>
+    STEP_CONFIG.findIndex((step) => step.id === currentStep);
+
+  const existingDocuments = useMemo(() => {
+    const byType: Record<
+      "id" | "insurance",
+      ProviderOnboardingDocument | null
+    > = {
+      id: null,
+      insurance: null,
+    };
+
+    for (const document of onboardingBootstrap?.documents ?? []) {
+      if (
+        document.document_type === "id" ||
+        document.document_type === "insurance"
+      ) {
+        byType[document.document_type] = document;
+      }
+    }
+
+    return byType;
+  }, [onboardingBootstrap?.documents]);
+
+  const hasProfilePhoto = Boolean(
+    profile.profilePhoto || onboardingBootstrap?.profile?.avatar_url,
+  );
+  const hasGovernmentId = Boolean(
+    documents.governmentId || existingDocuments.id,
+  );
+  const hasInsurance = Boolean(
+    documents.insurance || existingDocuments.insurance,
+  );
+
+  const selectedDaySummary =
+    selectedDays.length > 0
+      ? selectedDays.map((day) => WEEKDAY_LABELS[day]).join(", ")
+      : "No days selected";
+
+  const updateProfile = (updates: Partial<ProfileFormState>) => {
+    setProfile((current) => ({ ...current, ...updates }));
+  };
+
+  const updatePayment = (updates: Partial<PaymentFormState>) => {
+    setPayment((current) => ({ ...current, ...updates }));
+  };
+
+  const handleFileUpload = (
+    field: keyof OnboardingFiles | "profilePhoto",
+    file: File | null,
+  ) => {
+    if (field === "profilePhoto") {
+      updateProfile({ profilePhoto: file });
+      return;
+    }
+
+    setDocuments((current) => ({ ...current, [field]: file }));
+  };
+
+  const handleNext = () => {
+    const currentIndex = STEP_ORDER.indexOf(currentStep);
+    if (currentIndex >= 0 && currentIndex < STEP_ORDER.length - 1) {
+      setCurrentStep(STEP_ORDER[currentIndex + 1]);
+    }
+  };
+
+  const handleBack = () => {
+    const currentIndex = STEP_ORDER.indexOf(currentStep);
+    if (currentIndex > 0) {
+      setCurrentStep(STEP_ORDER[currentIndex - 1]);
+    }
+  };
+
+  const toggleDay = (day: ProviderOnboardingWeekday) => {
+    setSelectedDays((current) =>
+      current.includes(day)
+        ? current.filter((entry) => entry !== day)
+        : [...current, day],
+    );
+  };
 
   const handleResendVerification = async () => {
     if (!user?.email) {
@@ -230,7 +312,7 @@ export function ProviderOnboarding() {
   };
 
   const uploadDocument = async (
-    documentType: "id" | "insurance" | "certification",
+    documentType: "id" | "insurance",
     file: File,
   ) => {
     if (!user?.id) {
@@ -252,7 +334,7 @@ export function ProviderOnboarding() {
       throw uploadError;
     }
 
-    const { error: docError } = await supabase
+    const { error: documentError } = await supabase
       .from("verification_documents")
       .upsert(
         {
@@ -265,13 +347,54 @@ export function ProviderOnboarding() {
         { onConflict: "provider_id,document_type" },
       );
 
-    if (docError) {
-      throw docError;
+    if (documentError) {
+      throw documentError;
     }
   };
 
+  const refreshBootstrap = async () => {
+    await onboardingQuery.refetch();
+  };
+
+  const ensureProviderOnboardingStarted = async () => {
+    if (!shouldRecordOnboardingStart) {
+      return;
+    }
+
+    await startRoleOnboarding("provider");
+  };
+
+  useEffect(() => {
+    if (
+      !user?.id ||
+      !onboardingBootstrap ||
+      onboardingBootstrap.hasSubmittedVerification ||
+      !shouldRecordOnboardingStart ||
+      onboardingBootstrap.resumeStep === "email-verify"
+    ) {
+      return;
+    }
+
+    void ensureProviderOnboardingStarted().catch(() => {
+      setErrorMessage(
+        "We could not sync your provider onboarding state right now.",
+      );
+    });
+  }, [
+    onboardingBootstrap,
+    shouldRecordOnboardingStart,
+    startRoleOnboarding,
+    user?.id,
+  ]);
+
   const handleContinueDocuments = async () => {
-    if (!documents.governmentId || !documents.insurance) {
+    if (!user?.id) {
+      setErrorMessage("You must be signed in to continue.");
+      return;
+    }
+
+    if (!hasGovernmentId || !hasInsurance) {
+      setErrorMessage("Upload both required documents to continue.");
       return;
     }
 
@@ -279,9 +402,17 @@ export function ProviderOnboarding() {
       setIsSubmitting(true);
       setErrorMessage(null);
 
-      await uploadDocument("id", documents.governmentId);
-      await uploadDocument("insurance", documents.insurance);
+      if (documents.governmentId) {
+        await uploadDocument("id", documents.governmentId);
+      }
 
+      if (documents.insurance) {
+        await uploadDocument("insurance", documents.insurance);
+      }
+
+      await ensureProviderOnboardingStarted();
+      setDocuments({ governmentId: null, insurance: null });
+      await refreshBootstrap();
       handleNext();
     } catch (error) {
       const message =
@@ -298,7 +429,12 @@ export function ProviderOnboarding() {
       return;
     }
 
-    if (!profile.profilePhoto || !profile.description || !profile.hourlyRate) {
+    if (
+      !hasProfilePhoto ||
+      !profile.description.trim() ||
+      !profile.hourlyRate.trim()
+    ) {
+      setErrorMessage("Add a profile photo, bio, and hourly rate to continue.");
       return;
     }
 
@@ -306,39 +442,58 @@ export function ProviderOnboarding() {
       setIsSubmitting(true);
       setErrorMessage(null);
 
-      const safeAvatarName = profile.profilePhoto.name
-        .normalize("NFKD")
-        .replace(/[^a-zA-Z0-9._-]/g, "_")
-        .replace(/_+/g, "_");
+      if (profile.profilePhoto) {
+        const safeAvatarName = profile.profilePhoto.name
+          .normalize("NFKD")
+          .replace(/[^a-zA-Z0-9._-]/g, "_")
+          .replace(/_+/g, "_");
 
-      const photoPath = `${user.id}/${Date.now()}-${safeAvatarName}`;
-      const { error: avatarError } = await supabase.storage
-        .from("avatars")
-        .upload(photoPath, profile.profilePhoto);
+        const photoPath = `${user.id}/${Date.now()}-${safeAvatarName}`;
+        const { error: avatarError } = await supabase.storage
+          .from("avatars")
+          .upload(photoPath, profile.profilePhoto);
 
-      if (avatarError) {
-        throw avatarError;
+        if (avatarError) {
+          throw avatarError;
+        }
+
+        const { data: avatarPublic } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(photoPath);
+
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+            avatar_url: avatarPublic?.publicUrl ?? null,
+          })
+          .eq("id", user.id);
+
+        if (profileError) {
+          throw profileError;
+        }
       }
 
-      const { data: avatarPublic } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(photoPath);
-
-      await supabase
-        .from("profiles")
-        .update({
-          avatar_url: avatarPublic?.publicUrl ?? null,
-        })
-        .eq("id", user.id);
-
       const hourlyRate = Number.parseFloat(profile.hourlyRate);
+      const services = profile.services
+        .split(",")
+        .map((service) => service.trim())
+        .filter(Boolean);
+      const serviceAreas = profile.serviceAreas
+        .split(",")
+        .map((area) => area.trim())
+        .filter(Boolean);
 
       const { error: providerError } = await supabase
         .from("provider_profiles")
         .update({
-          bio: profile.description,
+          business_name:
+            profile.businessName.trim() ||
+            onboardingBootstrap?.profile?.full_name ||
+            null,
+          bio: profile.description.trim(),
           hourly_rate: Number.isNaN(hourlyRate) ? null : hourlyRate,
-          service_areas: profile.serviceAreas,
+          service_areas: serviceAreas,
+          services: services.length > 0 ? services : ["General Services"],
         })
         .eq("user_id", user.id);
 
@@ -346,6 +501,9 @@ export function ProviderOnboarding() {
         throw providerError;
       }
 
+      await ensureProviderOnboardingStarted();
+      updateProfile({ profilePhoto: null });
+      await refreshBootstrap();
       handleNext();
     } catch (error) {
       const message =
@@ -362,19 +520,26 @@ export function ProviderOnboarding() {
       return;
     }
 
+    if (selectedDays.length === 0) {
+      setErrorMessage("Choose at least one recurring work day to continue.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
 
       const { error } = await supabase
         .from("provider_profiles")
-        .update({ availability })
+        .update({ availability: buildWeeklyAvailability(selectedDays) })
         .eq("user_id", user.id);
 
       if (error) {
         throw error;
       }
 
+      await ensureProviderOnboardingStarted();
+      await refreshBootstrap();
       handleNext();
     } catch (error) {
       const message =
@@ -391,21 +556,35 @@ export function ProviderOnboarding() {
       return;
     }
 
+    const accountDigits = payment.accountNumber.replace(/\D/g, "");
+    const last4 = accountDigits.slice(-4);
+
+    if (
+      !payment.bankName.trim() ||
+      !payment.accountType.trim() ||
+      last4.length !== 4
+    ) {
+      setErrorMessage(
+        "Add a bank name, account type, and a valid account number ending.",
+      );
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
 
-      const last4 = payment.accountNumber.slice(-4);
       const { error } = await supabase
         .from("profiles")
         .update({
-          metadata: {
-            payout: {
+          metadata: buildProviderPayoutMetadataPatch(
+            onboardingBootstrap?.profile?.metadata,
+            {
               bankName: payment.bankName,
               accountType: payment.accountType,
-              last4,
+              accountNumberLast4: last4,
             },
-          },
+          ),
         })
         .eq("id", user.id);
 
@@ -413,6 +592,9 @@ export function ProviderOnboarding() {
         throw error;
       }
 
+      await ensureProviderOnboardingStarted();
+      updatePayment({ accountNumber: last4 });
+      await refreshBootstrap();
       handleNext();
     } catch (error) {
       const message =
@@ -446,15 +628,14 @@ export function ProviderOnboarding() {
 
       const { error: membershipError } = await supabase.rpc(
         "submit_role_onboarding",
-        {
-          p_role: "provider",
-        },
+        { p_role: "provider" },
       );
 
       if (membershipError) {
         throw membershipError;
       }
 
+      await refreshBootstrap();
       setCurrentStep("pending");
     } catch (error) {
       const message =
@@ -467,62 +648,130 @@ export function ProviderOnboarding() {
     }
   };
 
+  const renderDocumentUpload = (
+    id: keyof OnboardingFiles,
+    title: string,
+    description: string,
+  ) => {
+    const existingDocument =
+      id === "governmentId"
+        ? existingDocuments.id
+        : existingDocuments.insurance;
+    const status = existingDocument?.status ?? "not_started";
+    const selectedFile = documents[id];
+
+    return (
+      <div className="rounded-lg border border-dashed border-gray-300 p-6 transition-colors hover:border-blue-400">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-red-100">
+            <Shield className="h-6 w-6 text-red-600" />
+          </div>
+          <div className="flex-1 space-y-3">
+            <div>
+              <Label className="text-lg font-semibold">{title}</Label>
+              <p className="text-sm text-gray-600">{description}</p>
+            </div>
+
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(event) =>
+                handleFileUpload(id, event.target.files?.[0] || null)
+              }
+              className="hidden"
+              id={id}
+            />
+            <label htmlFor={id}>
+              <Button
+                type="button"
+                variant="outline"
+                className="cursor-pointer"
+                asChild
+              >
+                <span>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {selectedFile?.name ??
+                    existingDocument?.file_name ??
+                    "Choose file"}
+                </span>
+              </Button>
+            </label>
+
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span
+                className={`rounded-full px-2 py-1 text-xs font-medium ${
+                  documentStatusClass[status] ?? "bg-gray-100 text-gray-700"
+                }`}
+              >
+                {status.replace("_", " ")}
+              </span>
+              {existingDocument?.file_name ? (
+                <span>Current file: {existingDocument.file_name}</span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case "email-verify":
         return (
           <div className="space-y-6">
-            <div className="text-center py-8">
-              <div className="inline-flex items-center justify-center h-20 w-20 bg-blue-100 rounded-full mb-6">
+            <div className="py-8 text-center">
+              <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-blue-100">
                 <Shield className="h-10 w-10 text-blue-600" />
               </div>
-              <h2 className="text-2xl font-bold mb-4">Verify Your Email</h2>
-              <p className="text-gray-600 mb-6">
-                We've sent a verification link to{" "}
-                <strong>provider@example.com</strong>
+              <h2 className="mb-4 text-2xl font-bold">Verify Your Email</h2>
+              <p className="mb-6 text-gray-600">
+                We sent a verification link to{" "}
+                <strong>{user?.email ?? "your email"}</strong>
               </p>
 
-              {!emailVerified ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-gray-700">
-                    Check your inbox and click the verification link. This page
-                    will update automatically.
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                  <div className="flex items-center justify-center gap-2 text-green-700">
+              {onboardingBootstrap?.emailVerified ? (
+                <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-green-700">
+                  <div className="flex items-center justify-center gap-2">
                     <CheckCircle2 className="h-5 w-5" />
                     <span className="font-semibold">
-                      Email verified successfully!
+                      Email verified successfully.
                     </span>
                   </div>
                 </div>
+              ) : (
+                <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-gray-700">
+                  Refresh after opening the verification link in your inbox.
+                </div>
               )}
 
-              <Button
-                onClick={() => setEmailVerified(true)}
-                variant="outline"
-                className="mb-4"
-              >
-                Simulate Email Verification (Demo)
-              </Button>
-
-              <p className="text-sm text-gray-500">
-                Didn't receive the email?{" "}
-                <button
-                  className="text-blue-600 hover:underline"
-                  onClick={handleResendVerification}
+              <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void onboardingQuery.refetch()}
+                  disabled={onboardingQuery.isFetching}
                 >
-                  Resend verification
-                </button>
-              </p>
+                  {onboardingQuery.isFetching
+                    ? "Refreshing..."
+                    : "Refresh status"}
+                </Button>
+                {!onboardingBootstrap?.emailVerified ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleResendVerification}
+                  >
+                    Resend verification
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             <Button
               onClick={handleNext}
-              disabled={!emailVerified}
-              className="w-full bg-blue-600 hover:bg-blue-700 py-6"
+              disabled={!onboardingBootstrap?.emailVerified}
+              className="w-full bg-blue-600 py-6 hover:bg-blue-700"
             >
               Continue to Document Upload
             </Button>
@@ -533,127 +782,26 @@ export function ProviderOnboarding() {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Upload Documents</h2>
-              <p className="text-gray-600 mb-6">
-                All documents are{" "}
-                <span className="text-red-600 font-semibold">
-                  securely encrypted
-                </span>{" "}
-                and reviewed by our verification team
+              <h2 className="mb-2 text-2xl font-bold">Upload Documents</h2>
+              <p className="text-gray-600">
+                Upload your government ID and proof of insurance. Existing
+                uploads are preserved when you resume.
               </p>
             </div>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Shield className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="flex-1">
-                  <Label className="text-lg font-semibold">
-                    Government-Issued ID <span className="text-red-600">*</span>
-                  </Label>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Driver's license, passport, or state ID
-                  </p>
+            {renderDocumentUpload(
+              "governmentId",
+              "Government-Issued ID",
+              "Driver's license, passport, state ID, or PDF copy.",
+            )}
+            {renderDocumentUpload(
+              "insurance",
+              "Proof of Insurance",
+              "Liability insurance certificate image or PDF.",
+            )}
 
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) =>
-                      handleFileUpload(
-                        "governmentId",
-                        e.target.files?.[0] || null,
-                      )
-                    }
-                    className="hidden"
-                    id="governmentId"
-                  />
-                  <label htmlFor="governmentId">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="cursor-pointer"
-                      asChild
-                    >
-                      <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        {documents.governmentId
-                          ? documents.governmentId.name
-                          : "Choose File"}
-                      </span>
-                    </Button>
-                  </label>
-
-                  {documents.governmentId && (
-                    <div className="mt-2 flex items-center gap-2 text-green-600">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span className="text-sm">File uploaded</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Shield className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="flex-1">
-                  <Label className="text-lg font-semibold">
-                    Proof of Insurance <span className="text-red-600">*</span>
-                  </Label>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Liability insurance certificate or opt-in form
-                  </p>
-
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) =>
-                      handleFileUpload("insurance", e.target.files?.[0] || null)
-                    }
-                    className="hidden"
-                    id="insurance"
-                  />
-                  <label htmlFor="insurance">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="cursor-pointer"
-                      asChild
-                    >
-                      <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        {documents.insurance
-                          ? documents.insurance.name
-                          : "Choose File"}
-                      </span>
-                    </Button>
-                  </label>
-
-                  {documents.insurance && (
-                    <div className="mt-2 flex items-center gap-2 text-green-600">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span className="text-sm">File uploaded</span>
-                    </div>
-                  )}
-
-                  <button className="text-blue-600 hover:underline text-sm mt-2 block">
-                    Don't have insurance? Learn about our coverage plan →
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-gray-700">
-                  Documents typically take 24-48 hours to verify. You'll receive
-                  an email when approved.
-                </p>
-              </div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-gray-700">
+              Documents are reviewed by the verification team after submission.
             </div>
 
             <div className="flex gap-4">
@@ -666,12 +814,8 @@ export function ProviderOnboarding() {
               </Button>
               <Button
                 onClick={handleContinueDocuments}
-                disabled={
-                  !documents.governmentId ||
-                  !documents.insurance ||
-                  isSubmitting
-                }
-                className="flex-1 bg-blue-600 hover:bg-blue-700 py-6"
+                disabled={!hasGovernmentId || !hasInsurance || isSubmitting}
+                className="flex-1 bg-blue-600 py-6 hover:bg-blue-700"
               >
                 {isSubmitting ? "Uploading..." : "Continue to Profile Setup"}
               </Button>
@@ -683,21 +827,22 @@ export function ProviderOnboarding() {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Complete Your Profile</h2>
-              <p className="text-gray-600 mb-6">
-                Help clients find you and understand your services
+              <h2 className="mb-2 text-2xl font-bold">Complete Your Profile</h2>
+              <p className="text-gray-600">
+                Keep this aligned with the mobile provider setup: business name,
+                services, service areas, rate, and bio.
               </p>
             </div>
 
             <div>
-              <Label className="text-lg font-semibold mb-3 block">
-                Profile Photo <span className="text-red-600">*</span>
+              <Label className="mb-3 block text-lg font-semibold">
+                Profile Photo
               </Label>
               <div className="flex items-center gap-6">
-                <div className="h-32 w-32 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                  {profile.profilePhoto ? (
+                <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-gray-200">
+                  {avatarPreviewUrl ? (
                     <img
-                      src={URL.createObjectURL(profile.profilePhoto)}
+                      src={avatarPreviewUrl}
                       alt="Profile"
                       className="h-full w-full object-cover"
                     />
@@ -709,10 +854,10 @@ export function ProviderOnboarding() {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) =>
+                    onChange={(event) =>
                       handleFileUpload(
                         "profilePhoto",
-                        e.target.files?.[0] || null,
+                        event.target.files?.[0] || null,
                       )
                     }
                     className="hidden"
@@ -721,60 +866,59 @@ export function ProviderOnboarding() {
                   <label htmlFor="profilePhoto">
                     <Button type="button" variant="outline" asChild>
                       <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Photo
+                        <Upload className="mr-2 h-4 w-4" />
+                        {profile.profilePhoto
+                          ? profile.profilePhoto.name
+                          : "Upload Photo"}
                       </span>
                     </Button>
                   </label>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Professional headshot recommended
+                  <p className="mt-2 text-sm text-gray-500">
+                    Professional headshot recommended.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="description" className="text-lg font-semibold">
-                Service Description <span className="text-red-600">*</span>
-              </Label>
-              <p className="text-sm text-gray-600 mb-2">
-                Describe your services and experience
-              </p>
-              <Textarea
-                id="description"
-                placeholder="I specialize in residential plumbing with 10+ years of experience..."
-                rows={6}
-                value={profile.description}
-                onChange={(e) =>
-                  setProfile({ ...profile, description: e.target.value })
-                }
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="businessName">Business Name</Label>
+                <Input
+                  id="businessName"
+                  value={profile.businessName}
+                  onChange={(event) =>
+                    updateProfile({ businessName: event.target.value })
+                  }
+                  placeholder="Your business name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="services">Services</Label>
+                <Input
+                  id="services"
+                  value={profile.services}
+                  onChange={(event) =>
+                    updateProfile({ services: event.target.value })
+                  }
+                  placeholder="Cleaning, painting, electrical"
+                />
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="serviceRadius">
-                Service Radius (miles) <span className="text-red-600">*</span>
-              </Label>
+              <Label htmlFor="serviceAreas">Service Areas</Label>
               <Input
-                id="serviceRadius"
-                type="number"
-                min="1"
-                max="100"
-                value={profile.serviceRadius}
-                onChange={(e) =>
-                  setProfile({ ...profile, serviceRadius: e.target.value })
+                id="serviceAreas"
+                value={profile.serviceAreas}
+                onChange={(event) =>
+                  updateProfile({ serviceAreas: event.target.value })
                 }
-                placeholder="10"
+                placeholder="Kingston, Montego Bay"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                How far are you willing to travel for jobs?
-              </p>
             </div>
 
             <div>
-              <Label htmlFor="hourlyRate">
-                Base Hourly Rate <span className="text-red-600">*</span>
-              </Label>
+              <Label htmlFor="hourlyRate">Base Hourly Rate</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
                   $
@@ -785,13 +929,26 @@ export function ProviderOnboarding() {
                   min="0"
                   step="5"
                   value={profile.hourlyRate}
-                  onChange={(e) =>
-                    setProfile({ ...profile, hourlyRate: e.target.value })
+                  onChange={(event) =>
+                    updateProfile({ hourlyRate: event.target.value })
                   }
                   placeholder="50"
                   className="pl-8"
                 />
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="description">Service Description</Label>
+              <Textarea
+                id="description"
+                rows={6}
+                value={profile.description}
+                onChange={(event) =>
+                  updateProfile({ description: event.target.value })
+                }
+                placeholder="Tell clients what you specialize in and the types of jobs you take."
+              />
             </div>
 
             <div className="flex gap-4">
@@ -805,12 +962,12 @@ export function ProviderOnboarding() {
               <Button
                 onClick={handleContinueProfile}
                 disabled={
-                  !profile.profilePhoto ||
-                  !profile.description ||
-                  !profile.hourlyRate ||
+                  !hasProfilePhoto ||
+                  !profile.description.trim() ||
+                  !profile.hourlyRate.trim() ||
                   isSubmitting
                 }
-                className="flex-1 bg-blue-600 hover:bg-blue-700 py-6"
+                className="flex-1 bg-blue-600 py-6 hover:bg-blue-700"
               >
                 {isSubmitting ? "Saving..." : "Continue to Availability"}
               </Button>
@@ -822,31 +979,43 @@ export function ProviderOnboarding() {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Set Your Availability</h2>
-              <p className="text-gray-600 mb-6">
-                Let clients know when you're available for the next 2 weeks
+              <h2 className="mb-2 text-2xl font-bold">
+                Set Weekly Availability
+              </h2>
+              <p className="text-gray-600">
+                Choose the weekdays you normally accept work. This saves the
+                same recurring weekly schedule mobile uses.
               </p>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-700 mb-2">
-                    <strong>How it works:</strong> Select the days you're
-                    available. You can update this anytime.
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Clients see your availability in real-time when booking.
-                  </p>
-                </div>
-              </div>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-gray-700">
+              Pick at least one day. You can refine exact working hours later
+              from the provider calendar.
             </div>
 
-            <AvailabilityCalendar
-              availability={availability}
-              setAvailability={setAvailability}
-            />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+              {PROVIDER_ONBOARDING_WEEKDAYS.map((day) => {
+                const active = selectedDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
+                      active
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-blue-300"
+                    }`}
+                  >
+                    {WEEKDAY_LABELS[day]}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              Selected days: {selectedDaySummary}
+            </div>
 
             <div className="flex gap-4">
               <Button
@@ -858,8 +1027,8 @@ export function ProviderOnboarding() {
               </Button>
               <Button
                 onClick={handleContinueAvailability}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 py-6"
-                disabled={isSubmitting}
+                className="flex-1 bg-blue-600 py-6 hover:bg-blue-700"
+                disabled={selectedDays.length === 0 || isSubmitting}
               >
                 {isSubmitting ? "Saving..." : "Continue to Payment Setup"}
               </Button>
@@ -871,86 +1040,49 @@ export function ProviderOnboarding() {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Payment Information</h2>
-              <p className="text-gray-600 mb-6">
-                Where should we send your earnings?
+              <h2 className="mb-2 text-2xl font-bold">Payout Details</h2>
+              <p className="text-gray-600">
+                Store the payout metadata needed before provider earnings can be
+                released.
               </p>
             </div>
 
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-gray-700">
-                  All financial information is{" "}
-                  <span className="text-red-600 font-semibold">encrypted</span>{" "}
-                  and <span className="text-red-600 font-semibold">secure</span>
-                  .
-                </p>
-              </div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-gray-700">
+              Only the bank name, account type, and last 4 digits are stored.
             </div>
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="accountHolderName">
-                  Account Holder Name <span className="text-red-600">*</span>
-                </Label>
-                <Input
-                  id="accountHolderName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={payment.accountHolderName}
-                  onChange={(e) =>
-                    setPayment({
-                      ...payment,
-                      accountHolderName: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="bankName">
-                  Bank Name <span className="text-red-600">*</span>
-                </Label>
+                <Label htmlFor="bankName">Bank Name</Label>
                 <Input
                   id="bankName"
-                  type="text"
-                  placeholder="Chase Bank"
                   value={payment.bankName}
-                  onChange={(e) =>
-                    setPayment({ ...payment, bankName: e.target.value })
+                  onChange={(event) =>
+                    updatePayment({ bankName: event.target.value })
                   }
+                  placeholder="RBC"
                 />
               </div>
-
               <div>
-                <Label htmlFor="accountNumber">
-                  Account Number <span className="text-red-600">*</span>
-                </Label>
+                <Label htmlFor="accountType">Account Type</Label>
+                <Input
+                  id="accountType"
+                  value={payment.accountType}
+                  onChange={(event) =>
+                    updatePayment({ accountType: event.target.value })
+                  }
+                  placeholder="Checking"
+                />
+              </div>
+              <div>
+                <Label htmlFor="accountNumber">Account Number</Label>
                 <Input
                   id="accountNumber"
-                  type="text"
-                  placeholder="1234567890"
                   value={payment.accountNumber}
-                  onChange={(e) =>
-                    setPayment({ ...payment, accountNumber: e.target.value })
+                  onChange={(event) =>
+                    updatePayment({ accountNumber: event.target.value })
                   }
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="routingNumber">
-                  Routing Number <span className="text-red-600">*</span>
-                </Label>
-                <Input
-                  id="routingNumber"
-                  type="text"
-                  placeholder="123456789"
-                  maxLength={9}
-                  value={payment.routingNumber}
-                  onChange={(e) =>
-                    setPayment({ ...payment, routingNumber: e.target.value })
-                  }
+                  placeholder="Only the last 4 digits are stored"
                 />
               </div>
             </div>
@@ -966,13 +1098,12 @@ export function ProviderOnboarding() {
               <Button
                 onClick={handleContinuePayment}
                 disabled={
-                  !payment.accountHolderName ||
-                  !payment.bankName ||
-                  !payment.accountNumber ||
-                  !payment.routingNumber ||
+                  !payment.bankName.trim() ||
+                  !payment.accountType.trim() ||
+                  payment.accountNumber.replace(/\D/g, "").length < 4 ||
                   isSubmitting
                 }
-                className="flex-1 bg-blue-600 hover:bg-blue-700 py-6"
+                className="flex-1 bg-blue-600 py-6 hover:bg-blue-700"
               >
                 {isSubmitting ? "Saving..." : "Continue to Review"}
               </Button>
@@ -984,9 +1115,10 @@ export function ProviderOnboarding() {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Review & Submit</h2>
-              <p className="text-gray-600 mb-6">
-                Please review your information before submitting
+              <h2 className="mb-2 text-2xl font-bold">Review & Submit</h2>
+              <p className="text-gray-600">
+                Confirm the same core provider setup used on mobile before
+                submitting.
               </p>
             </div>
 
@@ -995,21 +1127,18 @@ export function ProviderOnboarding() {
                 <CardHeader>
                   <CardTitle>Documents</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>
-                        Government ID:{" "}
-                        {documents.governmentId?.name || "Not uploaded"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>
-                        Insurance: {documents.insurance?.name || "Not uploaded"}
-                      </span>
-                    </div>
+                <CardContent className="space-y-2 text-sm">
+                  <div>
+                    Government ID:{" "}
+                    {documents.governmentId?.name ??
+                      existingDocuments.id?.file_name ??
+                      "Not uploaded"}
+                  </div>
+                  <div>
+                    Insurance:{" "}
+                    {documents.insurance?.name ??
+                      existingDocuments.insurance?.file_name ??
+                      "Not uploaded"}
                   </div>
                 </CardContent>
               </Card>
@@ -1018,16 +1147,22 @@ export function ProviderOnboarding() {
                 <CardHeader>
                   <CardTitle>Profile</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>Service radius: {profile.serviceRadius} miles</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>Hourly rate: ${profile.hourlyRate}/hr</span>
-                    </div>
+                <CardContent className="space-y-2 text-sm">
+                  <div>
+                    Business name:{" "}
+                    {profile.businessName ||
+                      onboardingBootstrap?.profile?.full_name ||
+                      "Not provided"}
+                  </div>
+                  <div>Services: {profile.services || "General Services"}</div>
+                  <div>
+                    Service areas: {profile.serviceAreas || "Not provided"}
+                  </div>
+                  <div>
+                    Hourly rate:{" "}
+                    {profile.hourlyRate
+                      ? `$${profile.hourlyRate}/hr`
+                      : "Not provided"}
                   </div>
                 </CardContent>
               </Card>
@@ -1036,31 +1171,40 @@ export function ProviderOnboarding() {
                 <CardHeader>
                   <CardTitle>Availability</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span>
-                      {
-                        Object.keys(availability).filter((k) => availability[k])
-                          .length
-                      }{" "}
-                      days marked available
-                    </span>
+                <CardContent className="text-sm">
+                  Recurring schedule: {selectedDaySummary}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payout</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div>Bank: {payment.bankName || "Not provided"}</div>
+                  <div>
+                    Account type: {payment.accountType || "Not provided"}
+                  </div>
+                  <div>
+                    Ending:{" "}
+                    {payment.accountNumber
+                      ? `•••• ${payment.accountNumber.slice(-4)}`
+                      : "Not provided"}
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                 <div className="text-sm text-gray-700">
-                  <p className="font-semibold text-red-600 mb-1">
+                  <p className="mb-1 font-semibold text-red-600">
                     What happens next?
                   </p>
                   <p>
-                    Your application will be reviewed within 24-48 hours. You'll
-                    receive an email when approved.
+                    Your application is reviewed after submission. We will email
+                    you when the provider role is approved.
                   </p>
                 </div>
               </div>
@@ -1076,7 +1220,7 @@ export function ProviderOnboarding() {
               </Button>
               <Button
                 onClick={handleSubmitApplication}
-                className="flex-1 bg-red-600 hover:bg-red-700 py-6"
+                className="flex-1 bg-red-600 py-6 hover:bg-red-700"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Submitting..." : "Submit Application"}
@@ -1087,51 +1231,28 @@ export function ProviderOnboarding() {
 
       case "pending":
         return (
-          <div className="space-y-6 text-center py-8">
-            <div className="inline-flex items-center justify-center h-24 w-24 bg-green-100 rounded-full mb-6">
+          <div className="space-y-6 py-8 text-center">
+            <div className="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2 className="h-12 w-12 text-green-600" />
             </div>
 
-            <h2 className="text-3xl font-bold">Application Submitted!</h2>
-
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Thank you for applying to become a Hopterlink service provider
+            <h2 className="text-3xl font-bold">Application Submitted</h2>
+            <p className="mx-auto max-w-2xl text-xl text-gray-600">
+              Your provider application is in review. We will unlock the
+              provider dashboard after approval.
             </p>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
-              <h3 className="font-semibold text-lg mb-4">What's Next?</h3>
-              <div className="space-y-3 text-left">
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm">
-                    1
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Our verification team will review your documents (24-48
-                    hours)
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm">
-                    2
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    You'll receive an email confirmation when approved
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-sm">
-                    3
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Once approved, you can start accepting jobs immediately!
-                  </p>
-                </div>
-              </div>
+            <div className="mx-auto max-w-2xl rounded-lg border border-blue-200 bg-blue-50 p-6 text-left text-sm text-gray-700">
+              <p>1. The review team checks your documents and profile.</p>
+              <p>2. You receive an email when the provider role is approved.</p>
+              <p>
+                3. Once approved, you can switch into the provider dashboard.
+              </p>
             </div>
 
             <Button
-              onClick={() => navigate("/dashboard/provider")}
-              className="bg-blue-600 hover:bg-blue-700 px-8 py-6"
+              onClick={() => navigate("/dashboard")}
+              className="bg-blue-600 px-8 py-6 hover:bg-blue-700"
             >
               Return to Dashboard
             </Button>
@@ -1143,10 +1264,38 @@ export function ProviderOnboarding() {
     }
   };
 
+  if (onboardingQuery.isLoading && !isInitializedFromBootstrap) {
+    return (
+      <div className="min-h-screen bg-gray-50 px-4 py-12">
+        <div className="mx-auto max-w-3xl">
+          <Card>
+            <CardContent className="p-8 text-center text-gray-600">
+              Loading provider onboarding...
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 px-4 py-12">
+        <div className="mx-auto max-w-3xl">
+          <Card>
+            <CardContent className="p-8 text-center text-gray-600">
+              Sign in to continue provider onboarding.
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (currentStep === "pending") {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-gray-50 px-4 py-12">
+        <div className="mx-auto max-w-4xl">
           <Card className="border-2 border-green-200">
             <CardContent className="p-8">{renderStepContent()}</CardContent>
           </Card>
@@ -1156,65 +1305,76 @@ export function ProviderOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = step.id === currentStep;
-              const isCompleted = getCurrentStepIndex() > index;
-
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`h-12 w-12 rounded-full flex items-center justify-center border-2 transition-colors ${
-                        isActive
-                          ? "bg-blue-600 border-blue-600 text-white"
-                          : isCompleted
-                            ? "bg-green-500 border-green-500 text-white"
-                            : "bg-white border-gray-300 text-gray-400"
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 className="h-6 w-6" />
-                      ) : (
-                        <Icon className="h-6 w-6" />
-                      )}
-                    </div>
-                    <span
-                      className={`text-xs mt-2 text-center max-w-[80px] ${
-                        isActive
-                          ? "font-semibold text-blue-600"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div
-                      className={`h-0.5 w-12 mx-2 ${
-                        isCompleted ? "bg-green-500" : "bg-gray-300"
-                      }`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+    <div className="min-h-screen bg-gray-50 px-4 py-12">
+      <div className="mx-auto max-w-4xl space-y-8">
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold">Provider Onboarding</h1>
+          <p className="text-gray-600">
+            Complete the same onboarding data across web and mobile before
+            submitting your provider application.
+          </p>
         </div>
 
-        <Card>
-          <CardContent className="p-8">
-            {errorMessage && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {errorMessage}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+          {STEP_CONFIG.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = step.id === currentStep;
+            const isCompleted = getCurrentStepIndex() > index;
+
+            return (
+              <div key={step.id} className="flex min-w-[96px] items-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-colors ${
+                      isActive
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : isCompleted
+                          ? "border-green-500 bg-green-500 text-white"
+                          : "border-gray-300 bg-white text-gray-400"
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 className="h-6 w-6" />
+                    ) : (
+                      <Icon className="h-6 w-6" />
+                    )}
+                  </div>
+                  <span
+                    className={`mt-2 max-w-[84px] text-center text-xs ${
+                      isActive ? "font-semibold text-blue-600" : "text-gray-500"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+                {index < STEP_CONFIG.length - 1 ? (
+                  <div
+                    className={`mx-2 hidden h-0.5 w-12 sm:block ${
+                      isCompleted ? "bg-green-500" : "bg-gray-300"
+                    }`}
+                  />
+                ) : null}
               </div>
-            )}
-            {renderStepContent()}
-          </CardContent>
+            );
+          })}
+        </div>
+
+        {errorMessage ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {STEP_CONFIG.find((step) => step.id === currentStep)?.label}
+            </CardTitle>
+            <CardDescription>
+              Resume step: {onboardingBootstrap?.resumeStep ?? "email-verify"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-8">{renderStepContent()}</CardContent>
         </Card>
       </div>
     </div>

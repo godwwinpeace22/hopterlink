@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { PageHeader } from "../ui/page-header";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -11,7 +13,6 @@ import {
 } from "../ui/dialog";
 import { Textarea } from "../ui/textarea";
 import {
-  ArrowLeft,
   MapPin,
   DollarSign,
   Clock,
@@ -20,13 +21,9 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface MyJobsProps {
-  embedded?: boolean;
-}
 
 interface Quote {
   id: string;
@@ -60,7 +57,7 @@ const formatDate = (dateString?: string | null) => {
   return date.toLocaleDateString();
 };
 
-export function MyJobs({ embedded = false }: MyJobsProps) {
+export function MyJobs() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -219,100 +216,12 @@ export function MyJobs({ embedded = false }: MyJobsProps) {
     }
 
     try {
-      const acceptedAt = new Date().toISOString();
-
-      const { error: quoteError } = await supabase
-        .from("quotes")
-        .update({ status: "accepted", accepted_at: acceptedAt })
-        .eq("id", quote.id);
-
-      if (quoteError) {
-        throw quoteError;
-      }
-
-      const { error: jobError } = await supabase
-        .from("jobs")
-        .update({ status: "accepted" })
-        .eq("id", job.id);
-
-      if (jobError) {
-        throw jobError;
-      }
-
-      const amountValue = Number.parseFloat(quote.amount);
-
-      const { data: bookingData, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({
-          client_id: user.id,
-          provider_id: quote.providerId,
-          job_id: job.id,
-          quote_id: quote.id,
-          service_type: job.category,
-          description: job.description,
-          scheduled_date: new Date().toISOString(),
-          amount: Number.isNaN(amountValue) ? 0 : amountValue,
-          status: "confirmed",
-          payment_status: "pending",
-          location: {
-            address: job.location,
-          },
-        })
-        .select("id")
-        .single();
-
-      if (bookingError) {
-        throw bookingError;
-      }
-
-      const bookingId = bookingData?.id ?? null;
-      const escrowAmount = Number.isNaN(amountValue) ? 0 : amountValue;
-      const platformFee = Number((escrowAmount * 0.1).toFixed(2));
-      const providerAmount = Number((escrowAmount - platformFee).toFixed(2));
-
-      if (bookingId) {
-        const { error: escrowError } = await supabase
-          .from("escrow_payments")
-          .insert({
-            booking_id: bookingId,
-            client_id: user.id,
-            provider_id: quote.providerId,
-            amount: escrowAmount,
-            platform_fee: platformFee,
-            provider_amount: providerAmount,
-            status: "pending",
-            held_at: new Date().toISOString(),
-          });
-
-        if (escrowError) {
-          throw escrowError;
-        }
-      }
-
-      await supabase.from("notifications").insert({
-        user_id: quote.providerId,
-        type: "quote_accepted",
-        title: "Quote accepted",
-        message: `Your quote for ${job.title} was accepted.`,
-        related_id: bookingId ?? job.id,
+      const { data: bookingId, error } = await supabase.rpc("accept_quote", {
+        p_quote_id: quote.id,
       });
 
-      await supabase.from("notifications").insert({
-        user_id: quote.providerId,
-        type: "booking_confirmed",
-        title: "Booking created",
-        message: `A booking was created for ${job.title}.`,
-        related_id: bookingId ?? job.id,
-      });
-
-      if (bookingId) {
-        await supabase.from("notifications").insert({
-          user_id: user.id,
-          type: "payment_released",
-          title: "Escrow created",
-          message: `Escrow is holding $${escrowAmount.toFixed(2)} for ${job.title}.`,
-          related_id: bookingId,
-        });
+      if (error) {
+        throw error;
       }
 
       await fetchJobs(true);
@@ -346,20 +255,9 @@ export function MyJobs({ embedded = false }: MyJobsProps) {
         throw error;
       }
 
-      await supabase.from("notifications").insert({
-        user_id: selectedProvider.providerId,
-        type: "message_received",
-        title: "New message received",
-        message:
-          messageText.trim().length > 120
-            ? `${messageText.trim().slice(0, 120)}...`
-            : messageText.trim(),
-        related_id: selectedJob.id,
-      });
-
       setShowMessageDialog(false);
       setMessageText("");
-      alert("Message sent! The provider will respond soon.");
+      toast.success("Message sent! The provider will respond soon.");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to send message.";
@@ -369,39 +267,15 @@ export function MyJobs({ embedded = false }: MyJobsProps) {
 
   const content = (
     <>
-      {!embedded ? (
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <button
-              onClick={() => navigate("/dashboard/client")}
-              className="flex items-center gap-2 text-gray-600 hover:text-[#F7C876] transition-colors mb-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              Back to Dashboard
-            </button>
-            <h1 className="text-3xl font-bold">My Posted Jobs</h1>
-            <p className="text-gray-600">
-              View and manage your job posts and quotes
-            </p>
-          </div>
-          <Button
-            className="cursor-pointerbg-[#EFA055]"
-            onClick={() => navigate("/dashboard/client/post-job")}
-          >
-            + Post New Job
-          </Button>
-        </div>
-      ) : (
-        <div className="flex justify-end mb-4">
-          <Button
-            className="cursor-pointer text-black bg-[#F7C876] hover:bg-[#EFA055]"
-            onClick={() => navigate("/dashboard/client/post-job")}
-            size="sm"
-          >
-            + Post New Job
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end mb-4">
+        <Button
+          className="cursor-pointer text-black bg-[#F7C876] hover:bg-[#EFA055]"
+          onClick={() => navigate("/dashboard/client/post-job")}
+          size="sm"
+        >
+          + Post New Job
+        </Button>
+      </div>
 
       <div className="space-y-6">
         {errorMessage && (
@@ -509,13 +383,10 @@ export function MyJobs({ embedded = false }: MyJobsProps) {
     </>
   );
 
-  if (embedded) {
-    return <div className="space-y-6">{content}</div>;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">{content}</div>
+    <div className="space-y-6 pt-6">
+      <PageHeader title="My Jobs" hideBack />
+      {content}
     </div>
   );
 }

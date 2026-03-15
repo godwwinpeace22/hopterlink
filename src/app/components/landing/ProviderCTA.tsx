@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { UserPlus } from "lucide-react";
 
 export function ProviderCTA() {

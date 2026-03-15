@@ -1,8 +1,7 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { Bell } from "lucide-react";
-import { Avatar, AvatarFallback } from "../../ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { Button } from "../../ui/button";
-import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface ProviderDashboardHeaderProps {
   providerName: string;
+  avatarUrl?: string;
   unreadNotifications: number;
 }
 
@@ -30,52 +30,19 @@ const getInitials = (name: string) => {
 
 export function ProviderDashboardHeader({
   providerName,
+  avatarUrl,
   unreadNotifications,
 }: ProviderDashboardHeaderProps) {
   const navigate = useNavigate();
-  const {
-    signOut,
-    memberships,
-    approvedRoles,
-    activeRole,
-    switchRole,
-    startRoleOnboarding,
-  } = useAuth();
-  const [isRoleActionLoading, setIsRoleActionLoading] = useState(false);
-
-  const clientMembership = memberships.find(
-    (membership) => membership.role === "client",
-  );
-  const canSwitchToClient =
-    approvedRoles.includes("client") && activeRole !== "client";
-  const canBecomeClient = !clientMembership;
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  const handleClientAction = async () => {
-    setIsRoleActionLoading(true);
-    try {
-      if (canSwitchToClient) {
-        await switchRole("client");
-        navigate("/dashboard/client");
-        return;
-      }
-
-      if (canBecomeClient) {
-        await startRoleOnboarding("client");
-        await switchRole("client");
-        navigate("/dashboard/client");
-      }
-    } finally {
-      setIsRoleActionLoading(false);
-    }
-  };
-
   return (
-    <header className="bg-white border-b sticky top-0 z-50">
+    <header className="bg-white border-b shrink-0">
       <div className="px-4 lg:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <SidebarTrigger />
@@ -85,12 +52,16 @@ export function ProviderDashboardHeader({
           <Button
             variant="ghost"
             size="icon"
+            title="Notifications"
             className="relative"
             onClick={() => navigate("/dashboard/provider/notifications")}
+            aria-label="View unread notifications"
           >
             <Bell className="h-5 w-5" />
             {unreadNotifications > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+              <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
             )}
           </Button>
           <DropdownMenu>
@@ -99,8 +70,9 @@ export function ProviderDashboardHeader({
                 className="rounded-full cursor-pointer"
                 aria-label="Open user menu"
               >
-                <Avatar>
-                  <AvatarFallback className="bg-blue-600 text-white">
+                <Avatar className="h-8 w-8 border">
+                  {avatarUrl && <AvatarImage src={avatarUrl} />}
+                  <AvatarFallback className="bg-[#F1A400] text-white">
                     {getInitials(providerName || "Provider")}
                   </AvatarFallback>
                 </Avatar>
@@ -114,33 +86,13 @@ export function ProviderDashboardHeader({
               >
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={() => navigate("/dashboard/provider/messages")}
-              >
-                Messages
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={() => navigate("/dashboard/provider/notifications")}
-              >
-                Notifications
-              </DropdownMenuItem>
+
               <DropdownMenuItem
                 className="cursor-pointer"
                 onSelect={() => navigate("/dashboard/provider/settings")}
               >
                 Settings
               </DropdownMenuItem>
-              {(canSwitchToClient || canBecomeClient) && (
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onSelect={handleClientAction}
-                  disabled={isRoleActionLoading}
-                >
-                  {canSwitchToClient ? "Switch to Client" : "Become a Client"}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer text-red-600 focus:text-red-600"

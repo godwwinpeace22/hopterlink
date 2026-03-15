@@ -1,10 +1,11 @@
+import { PageHeader } from "../../../ui/page-header";
 import { Button } from "../../../ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
+  // CardTitle,
 } from "../../../ui/card";
 import { Switch } from "../../../ui/switch";
 import {
@@ -14,10 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../ui/select";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useProviderAvailability } from "@/app/hooks/useProviderAvailability";
+import {
+  buildAvailabilityDay,
+  buildCanonicalAvailability,
+  buildUnavailableWeeklyAvailability,
+  formatAvailabilitySummary,
+  getWeekdayFromDateKey,
+  resolveAvailabilityForDate,
+  useProviderAvailability,
+  type AvailabilityRange,
+} from "@/app/hooks/useProviderAvailability";
 import { supabase } from "@/lib/supabase";
 import { Plus } from "lucide-react";
 
@@ -51,11 +61,15 @@ const timezoneOptions = [
 
 export const ProviderCalendar = () => {
   const { user } = useAuth();
-  const { dates, setDates, settings, setSettings, isLoading, error } =
-    useProviderAvailability(user?.id);
+  const { availability, isLoading, error } = useProviderAvailability(user?.id);
   const [anchorDate] = useState<Date>(() => new Date());
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [dates, setDates] = useState<Record<string, AvailabilityRange[]>>({});
+  const [settings, setSettings] = useState(() => ({
+    timezone: availability.settings.timezone,
+    recurring: availability.settings.recurring,
+  }));
 
   const weekDates = useMemo(() => {
     const start = new Date(anchorDate);
@@ -66,6 +80,34 @@ export const ProviderCalendar = () => {
       return date;
     });
   }, [anchorDate]);
+
+  const inferredRecurring = useMemo(() => {
+    if (availability.settings.recurring) {
+      return true;
+    }
+
+    return (
+      availability.hasExplicitAvailability &&
+      Object.keys(availability.dates).length === 0
+    );
+  }, [availability]);
+
+  useEffect(() => {
+    const nextDates = weekDates.reduce<Record<string, AvailabilityRange[]>>(
+      (acc, date) => {
+        const dateKey = date.toISOString().slice(0, 10);
+        acc[dateKey] = resolveAvailabilityForDate(availability, dateKey).ranges;
+        return acc;
+      },
+      {},
+    );
+
+    setDates(nextDates);
+    setSettings({
+      timezone: availability.settings.timezone,
+      recurring: inferredRecurring,
+    });
+  }, [availability, inferredRecurring, weekDates]);
 
   const formatTime = (value: string) => {
     if (!value) return "";
@@ -146,20 +188,56 @@ export const ProviderCalendar = () => {
     [dates],
   );
 
+  const hasAnyRanges = useMemo(
+    () => Object.values(dates).some((ranges) => ranges.length > 0),
+    [dates],
+  );
+
   const handleSaveAvailability = async () => {
     if (!user?.id) return;
     setIsSaving(true);
     setErrorMessage(null);
 
     try {
+      const weekly = settings.recurring
+        ? weekDates.reduce((acc, date) => {
+            const dateKey = date.toISOString().slice(0, 10);
+            const weekday = getWeekdayFromDateKey(dateKey);
+
+            if (!weekday) {
+              return acc;
+            }
+
+            acc[weekday] = buildAvailabilityDay(
+              dates[dateKey]?.length ? "custom" : "unavailable",
+              dates[dateKey] ?? [],
+            );
+            return acc;
+          }, buildUnavailableWeeklyAvailability())
+        : buildUnavailableWeeklyAvailability();
+
+      const dateOverrides = settings.recurring
+        ? {}
+        : Object.entries(dates).reduce<
+            Record<string, ReturnType<typeof buildAvailabilityDay>>
+          >((acc, [dateKey, ranges]) => {
+            if (ranges.length === 0) {
+              return acc;
+            }
+
+            acc[dateKey] = buildAvailabilityDay("custom", ranges);
+            return acc;
+          }, {});
+
       const { error } = await supabase
         .from("provider_profiles")
         .update({
-          availability: {
-            dates,
+          availability: buildCanonicalAvailability({
             timezone: settings.timezone,
             recurring: settings.recurring,
-          },
+            weekly,
+            dates: dateOverrides,
+          }),
         })
         .eq("user_id", user.id);
 
@@ -182,14 +260,15 @@ export const ProviderCalendar = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
+      <PageHeader title="Availability" hideBack />
       <Card className="border border-gray-200/80 bg-white">
         <CardHeader className="bg-[#FDEFD6]/40">
-          <CardTitle className="tracking-tight">
+          {/* <CardTitle className="tracking-tight">
             Availability Calendar
-          </CardTitle>
+          </CardTitle> */}
           <CardDescription>
-            Manage your availability for the next two weeks
+            Manage a recurring weekly schedule or save a one-off week
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -200,8 +279,9 @@ export const ProviderCalendar = () => {
                   Availability for this week
                 </h3>
                 <p className="text-xs text-gray-500">
-                  Add one or more time ranges per day. No entries means
-                  unavailable.
+                  Add one or more time ranges per day. Recurring mode saves a
+                  weekly pattern. Turning it off saves this week as
+                  date-specific overrides.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -232,17 +312,12 @@ export const ProviderCalendar = () => {
                           })}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {dayRanges.length > 0
-                            ? dayRanges
-                                .map((range) =>
-                                  range.start && range.end
-                                    ? `${formatTime(
-                                        range.start,
-                                      )} – ${formatTime(range.end)}`
-                                    : "Select time",
-                                )
-                                .join(", ")
-                            : "Unavailable"}
+                          {formatAvailabilitySummary(
+                            buildAvailabilityDay(
+                              dayRanges.length > 0 ? "custom" : "unavailable",
+                              dayRanges,
+                            ),
+                          )}
                         </div>
                       </div>
                       <Button
@@ -363,6 +438,11 @@ export const ProviderCalendar = () => {
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                 Please select a valid start and end time for all availability
                 ranges before saving.
+              </div>
+            )}
+            {!hasAnyRanges && (
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                Saving with no ranges will mark the visible days as unavailable.
               </div>
             )}
             <Button

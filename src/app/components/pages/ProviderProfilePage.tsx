@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "@/lib/router";
 import {
   Star,
   MapPin,
@@ -9,32 +9,18 @@ import {
   ArrowLeft,
   Calendar,
   Shield,
+  Loader2,
 } from "lucide-react";
-import { mockProviders } from "@/app/data/mockProviders";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
-const mockReviews = [
-  {
-    id: "r-1",
-    author: "Sarah K.",
-    rating: 5,
-    date: "2025-12-10",
-    text: "Absolutely brilliant work! Delivered ahead of schedule and the quality exceeded my expectations. Would highly recommend.",
-  },
-  {
-    id: "r-2",
-    author: "Michael T.",
-    rating: 4,
-    date: "2025-11-22",
-    text: "Great communication throughout the project. Minor revision was handled quickly. Very professional.",
-  },
-  {
-    id: "r-3",
-    author: "Emma L.",
-    rating: 5,
-    date: "2025-10-05",
-    text: "This was my second time hiring and the results were just as fantastic. Truly talented professional.",
-  },
-];
+function formatResponseTime(minutes: number | null): string {
+  if (!minutes) return "Within a day";
+  if (minutes < 60) return `Within ${minutes} min`;
+  if (minutes < 1440) return `Within ${Math.round(minutes / 60)} hr`;
+  return `Within ${Math.round(minutes / 1440)} days`;
+}
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -49,11 +35,74 @@ function StarRow({ rating }: { rating: number }) {
   );
 }
 
+function useProviderProfile(providerId: string | undefined) {
+  return useQuery({
+    queryKey: ["provider-profile", providerId],
+    queryFn: async () => {
+      if (!providerId) return null;
+      const { data, error } = await supabase
+        .from("provider_profiles")
+        .select(
+          `
+          user_id, business_name, bio, services, hourly_rate,
+          service_areas, rating, total_reviews, jobs_completed,
+          verification_status, response_time, portfolio_urls,
+          created_at,
+          profile:profiles!provider_profiles_user_id_fkey (
+            full_name, avatar_url, location
+          )
+        `,
+        )
+        .eq("user_id", providerId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!providerId,
+  });
+}
+
+function useProviderReviews(providerId: string | undefined) {
+  return useQuery({
+    queryKey: ["provider-reviews", providerId],
+    queryFn: async () => {
+      if (!providerId) return [];
+      const { data, error } = await supabase
+        .from("reviews")
+        .select(
+          `
+          id, rating, comment, created_at,
+          reviewer:profiles!reviews_reviewer_id_fkey ( full_name )
+        `,
+        )
+        .eq("reviewee_id", providerId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!providerId,
+  });
+}
+
 export function ProviderProfile() {
   const { providerId } = useParams();
-  const provider = mockProviders.find((p) => p.id === providerId);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: provider, isLoading, error } = useProviderProfile(providerId);
+  const { data: reviews = [] } = useProviderReviews(providerId);
 
-  if (!provider) {
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-24 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
+  if (error || !provider) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-24 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -72,10 +121,19 @@ export function ProviderProfile() {
     );
   }
 
-  const memberDate = new Date(provider.memberSince).toLocaleDateString(
-    "en-GB",
-    { month: "long", year: "numeric" },
-  );
+  const profile = Array.isArray(provider.profile)
+    ? provider.profile[0]
+    : provider.profile;
+  const name = profile?.full_name ?? provider.business_name ?? "Provider";
+  const avatarUrl = profile?.avatar_url;
+  const loc = profile?.location as { city?: string; address?: string } | null;
+  const location = loc?.city ?? loc?.address ?? "Canada";
+  const verified = provider.verification_status === "approved";
+  const portfolio = provider.portfolio_urls ?? [];
+  const memberDate = new Date(provider.created_at).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="py-10 lg:py-14">
@@ -95,40 +153,48 @@ export function ProviderProfile() {
             {/* Hero card */}
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               {/* Cover */}
-              <div className="h-48 bg-gray-100 overflow-hidden">
-                <img
-                  src={provider.portfolio[0]}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+              <div className="h-48 bg-gradient-to-br from-amber-100 to-orange-50 overflow-hidden">
+                {portfolio[0] && (
+                  <img
+                    src={portfolio[0]}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
 
               <div className="p-6 -mt-12 relative">
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                   <img
-                    src={provider.avatar}
-                    alt={provider.name}
+                    src={
+                      avatarUrl ||
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=F7C876&color=fff&size=96`
+                    }
+                    alt={name}
                     className="h-24 w-24 rounded-full border-4 border-white shadow-lg object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
-                        "https://ui-avatars.com/api/?name=" +
-                        encodeURIComponent(provider.name) +
-                        "&background=F7C876&color=fff&size=96";
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=F7C876&color=fff&size=96`;
                     }}
                   />
                   <div className="flex-1 min-w-0 pb-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-2xl font-bold text-gray-900">
-                        {provider.name}
+                        {name}
                       </h1>
-                      {provider.verified && (
+                      {verified && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Verified
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-600 mt-0.5">{provider.tagline}</p>
+                    {provider.business_name &&
+                      provider.business_name !== name && (
+                        <p className="text-gray-600 mt-0.5">
+                          {provider.business_name}
+                        </p>
+                      )}
                   </div>
                 </div>
 
@@ -137,85 +203,108 @@ export function ProviderProfile() {
                   <span className="flex items-center gap-1.5">
                     <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                     <strong className="text-gray-900">
-                      {provider.rating}
+                      {provider.rating?.toFixed(1) ?? "New"}
                     </strong>{" "}
-                    ({provider.reviewCount} reviews)
+                    ({provider.total_reviews ?? 0} reviews)
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Briefcase className="h-4 w-4" />
-                    {provider.completedJobs} jobs completed
+                    {provider.jobs_completed ?? 0} jobs completed
                   </span>
                   <span className="flex items-center gap-1.5">
                     <MapPin className="h-4 w-4" />
-                    {provider.location}
+                    {location}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4" />
-                    Responds {provider.responseTime.toLowerCase()}
+                    Responds{" "}
+                    {formatResponseTime(provider.response_time).toLowerCase()}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* About */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">
-                About
-              </h2>
-              <p className="text-gray-600 leading-relaxed">{provider.bio}</p>
-            </div>
+            {provider.bio && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">
+                  About
+                </h2>
+                <p className="text-gray-600 leading-relaxed">{provider.bio}</p>
+              </div>
+            )}
 
             {/* Portfolio gallery */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Portfolio
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {provider.portfolio.map((img, i) => (
-                  <div
-                    key={i}
-                    className="aspect-[4/3] rounded-lg overflow-hidden bg-gray-100"
-                  >
-                    <img
-                      src={img}
-                      alt={`Portfolio ${i + 1}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                ))}
+            {portfolio.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Portfolio
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {portfolio.map((img: string, i: number) => (
+                    <div
+                      key={i}
+                      className="aspect-[4/3] rounded-lg overflow-hidden bg-gray-100"
+                    >
+                      <img
+                        src={img}
+                        alt={`Portfolio ${i + 1}`}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Reviews */}
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Reviews
               </h2>
-              <div className="space-y-5">
-                {mockReviews.map((review) => (
-                  <div
-                    key={review.id}
-                    className="pb-5 border-b border-gray-100 last:border-0 last:pb-0"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">
-                          {review.author}
-                        </span>
-                        <StarRow rating={review.rating} />
+              {reviews.length === 0 ? (
+                <p className="text-sm text-gray-500">No reviews yet.</p>
+              ) : (
+                <div className="space-y-5">
+                  {reviews.map((review) => {
+                    const reviewer = Array.isArray(review.reviewer)
+                      ? review.reviewer[0]
+                      : review.reviewer;
+                    return (
+                      <div
+                        key={review.id}
+                        className="pb-5 border-b border-gray-100 last:border-0 last:pb-0"
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              {reviewer?.full_name ?? "Anonymous"}
+                            </span>
+                            <StarRow rating={review.rating} />
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            {review.created_at
+                              ? new Date(review.created_at).toLocaleDateString(
+                                  "en-GB",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )
+                              : ""}
+                          </span>
+                        </div>
+                        {review.comment && (
+                          <p className="text-sm text-gray-600">
+                            {review.comment}
+                          </p>
+                        )}
                       </div>
-                      <span className="text-xs text-gray-400">
-                        {new Date(review.date).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">{review.text}</p>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -224,17 +313,42 @@ export function ProviderProfile() {
             {/* Hire card */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 sticky top-24">
               <p className="text-2xl font-bold text-gray-900 mb-1">
-                ${provider.hourlyRate}
+                ${provider.hourly_rate ?? 0}
                 <span className="text-base font-normal text-gray-500">/hr</span>
               </p>
               <p className="text-xs text-gray-500 mb-5">
                 Starting price — final quote after brief
               </p>
 
-              <button className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition-all mb-3">
-                Hire {provider.name.split(" ")[0]}
+              <button
+                onClick={() => {
+                  if (!user) {
+                    navigate("/sign-in");
+                    return;
+                  }
+                  navigate("/dashboard/client/booking", {
+                    state: { providerId: provider.user_id, providerName: name },
+                  });
+                }}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition-all mb-3"
+              >
+                Hire {name.split(" ")[0]}
               </button>
-              <button className="w-full py-3 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  if (!user) {
+                    navigate("/sign-in");
+                    return;
+                  }
+                  navigate("/dashboard/client/messages", {
+                    state: {
+                      recipientId: provider.user_id,
+                      recipientName: name,
+                    },
+                  });
+                }}
+                className="w-full py-3 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+              >
                 <MessageCircle className="h-4 w-4" />
                 Send Message
               </button>
@@ -246,46 +360,50 @@ export function ProviderProfile() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-gray-400" />
-                  {provider.verified
-                    ? "Identity verified"
-                    : "Verification pending"}
+                  {verified ? "Identity verified" : "Verification pending"}
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-gray-400" />
-                  Avg. response: {provider.responseTime.toLowerCase()}
+                  Avg. response:{" "}
+                  {formatResponseTime(provider.response_time).toLowerCase()}
                 </div>
               </div>
             </div>
 
-            {/* Skills */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                Skills
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {provider.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full"
-                  >
-                    {skill}
-                  </span>
-                ))}
+            {/* Services */}
+            {provider.services && provider.services.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                  Services
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {provider.services.map((service: string) => (
+                    <span
+                      key={service}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Category */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                Category
-              </h3>
-              <Link
-                to={`/services?category=${encodeURIComponent(provider.category)}`}
-                className="text-sm text-amber-600 hover:text-amber-700 font-medium"
-              >
-                {provider.category}
-              </Link>
-            </div>
+            {/* Service Areas */}
+            {provider.service_areas && provider.service_areas.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  Service Areas
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {provider.service_areas.map((area: string) => (
+                    <span key={area} className="text-sm text-gray-600">
+                      {area}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

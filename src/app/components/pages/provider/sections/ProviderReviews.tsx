@@ -4,13 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
 import { Button } from "../../../ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../ui/card";
+import { Card, CardContent } from "../../../ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../ui/dialog";
+import { PageHeader } from "../../../ui/page-header";
 import { Textarea } from "../../../ui/textarea";
 import { CheckCircle, Star } from "lucide-react";
 
@@ -102,34 +97,24 @@ export const ProviderReviews = () => {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-3xl space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="text-xl">Reviews</CardTitle>
-                <CardDescription className="mt-1">
-                  Track your feedback history and public reputation.
-                </CardDescription>
-              </div>
-
-              <div className="rounded-2xl border bg-gray-50 px-4 py-3 text-right">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Overall rating
-                </p>
-                <div className="mt-1 flex items-center justify-end gap-2">
-                  <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-                  <span className="text-2xl font-semibold">
-                    {providerData.rating.toFixed(1)}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  {providerData.totalReviews} received reviews
-                </p>
-              </div>
+      <div className="space-y-6 pt-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <PageHeader title="Reviews" hideBack />
+          <div className="rounded-2xl border bg-gray-50 px-4 py-3 text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Overall rating
+            </p>
+            <div className="mt-1 flex items-center justify-end gap-2">
+              <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+              <span className="text-2xl font-semibold">
+                {providerData.rating.toFixed(1)}
+              </span>
             </div>
-          </CardHeader>
-        </Card>
+            <p className="text-xs text-gray-500">
+              {providerData.totalReviews} received reviews
+            </p>
+          </div>
+        </div>
 
         <Card>
           <CardContent className="pt-6">
@@ -272,7 +257,7 @@ export const ProviderReviews = () => {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                className="flex-1 bg-[#F1A400] text-slate-950 hover:bg-[#EFA055]"
                 onClick={handleSubmitResponse}
                 disabled={!responseText.trim()}
               >

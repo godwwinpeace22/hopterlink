@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 
 import AboutHeroImage from "@/assets/about-hero.jpg";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router";
 
 export default function AboutHero() {
   return (

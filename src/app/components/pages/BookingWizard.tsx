@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -21,7 +21,6 @@ import {
   Upload,
   FileText,
   ImageIcon,
-  DollarSign,
   CreditCard,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -30,6 +29,15 @@ import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
 import { WALLET_CONFIG } from "@/app/config/walletConfig";
 import { useWalletTopups } from "@/app/hooks/useWalletTopups";
 import { useCreateWalletTopupCheckout } from "@/app/hooks/useCreateWalletTopupCheckout";
+import {
+  buildAvailabilityStartTimes,
+  formatAvailabilitySummary,
+  formatAvailabilityTimeLabel,
+  normalizeAvailability,
+  resolveAvailabilityForDate,
+  toDateKey,
+  type NormalizedAvailability,
+} from "@/lib/providerAvailability";
 
 interface BookingWizardProps {
   data?: any;
@@ -52,108 +60,31 @@ type ProviderData = {
   hourlyRate: number;
   avatar: string;
   services: string[];
-  availability: Record<string, string[]>;
+  serviceMinimumHours: Record<string, number>;
+  availability: NormalizedAvailability;
 };
 
 type SelectedPhoto = File | string;
 
-const parseAvailability = (value: unknown): Record<string, string[]> => {
+const isValidDate = (value: unknown): value is Date => {
+  return value instanceof Date && !Number.isNaN(value.getTime());
+};
+
+const parseServiceMinimumHours = (value: unknown): Record<string, number> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
 
-  const formatTime = (timeValue: string) => {
-    const [hours, minutes] = timeValue.split(":").map(Number);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeValue;
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date
-      .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-      .replace(" ", "")
-      .toLowerCase();
-  };
-
-  const root = value as Record<string, unknown>;
-  const datesSource =
-    root.dates && typeof root.dates === "object" && !Array.isArray(root.dates)
-      ? (root.dates as Record<string, unknown>)
-      : root;
-  const dateKeyPattern = /^\d{4}-\d{2}-\d{2}$/;
-
-  return Object.entries(datesSource).reduce(
-    (acc, [key, slots]) => {
-      if (!dateKeyPattern.test(key)) {
-        return acc;
-      }
-
-      if (Array.isArray(slots)) {
-        const ranges = slots
-          .filter(
-            (range) =>
-              range && typeof range === "object" && !Array.isArray(range),
-          )
-          .map((range) => range as { start?: string; end?: string })
-          .filter((range) => range.start && range.end)
-          .map(
-            (range) =>
-              `${formatTime(range.start ?? "")}` +
-              ` - ${formatTime(range.end ?? "")}`,
-          );
-
-        if (ranges.length > 0) {
-          acc[key] = ranges;
-        }
-        return acc;
-      }
-
-      if (slots && typeof slots === "object" && !Array.isArray(slots)) {
-        const range = slots as {
-          start?: string;
-          end?: string;
-          available?: boolean;
-        };
-        if (range.available === false) {
-          return acc;
-        }
-        if (range.start && range.end) {
-          acc[key] = [`${formatTime(range.start)} - ${formatTime(range.end)}`];
-          return acc;
-        }
-      }
-
-      if (slots === true) {
-        acc[key] = ["Any time"];
-        return acc;
-      }
-
-      if (typeof slots === "string") {
-        const normalized = slots.trim();
-        if (normalized) {
-          acc[key] = [normalized];
-        }
-        return acc;
-      }
-
-      if (Array.isArray(slots)) {
-        const normalized = slots
-          .map((slot) =>
-            typeof slot === "string" ? slot : slot == null ? "" : String(slot),
-          )
-          .map((slot) => slot.trim())
-          .filter(Boolean);
-
-        if (normalized.length > 0) {
-          acc[key] = normalized;
-        }
+  return Object.entries(value as Record<string, unknown>).reduce(
+    (acc, [service, rawValue]) => {
+      const numericValue = Number(rawValue);
+      if (Number.isFinite(numericValue) && numericValue > 0) {
+        acc[service] = numericValue;
       }
       return acc;
     },
-    {} as Record<string, string[]>,
+    {} as Record<string, number>,
   );
-};
-
-const isValidDate = (value: unknown): value is Date => {
-  return value instanceof Date && !Number.isNaN(value.getTime());
 };
 
 export function BookingWizard({ data }: BookingWizardProps) {
@@ -186,9 +117,8 @@ export function BookingWizard({ data }: BookingWizardProps) {
     selectedTime: "",
     address: "",
     description: "",
-    estimatedDuration: "1-2",
+    requestedHours: "2",
     urgency: "flexible" as "urgent" | "flexible",
-    budget: "",
     photos: [] as SelectedPhoto[],
     paymentMethod: "wallet" as "wallet",
     cardNumber: "",
@@ -298,6 +228,7 @@ export function BookingWizard({ data }: BookingWizardProps) {
           business_name,
           services,
           hourly_rate,
+          service_minimum_hours,
           rating,
           total_reviews,
           availability,
@@ -312,13 +243,12 @@ export function BookingWizard({ data }: BookingWizardProps) {
       { enabled: Boolean(providerId) },
     );
 
-  const paymentsQuery = useSupabaseQuery(
-    ["booking_wallet_payments", user?.id],
+  const balanceQuery = useSupabaseQuery(
+    ["booking_wallet_balance", user?.id],
     () =>
-      supabase
-        .from("escrow_payments")
-        .select("amount, status")
-        .eq("client_id", user?.id ?? ""),
+      supabase.rpc("compute_wallet_balance", {
+        p_user_id: user?.id ?? "",
+      }),
     { enabled: Boolean(user?.id) },
   );
 
@@ -332,53 +262,78 @@ export function BookingWizard({ data }: BookingWizardProps) {
       maximumFractionDigits: 2,
     }).format(amount);
 
-  const walletTopupBalance = useMemo(
-    () =>
-      topups
-        .filter((topup) => topup.status === "succeeded")
-        .reduce((sum, topup) => sum + topup.amount_cents / 100, 0),
-    [topups],
+  const availableWalletBalance = Math.max(
+    Number(balanceQuery.data?.data ?? 0),
+    0,
   );
 
-  const walletSpend = useMemo(
-    () =>
-      (paymentsQuery.data?.data ?? [])
-        .filter(
-          (payment) =>
-            payment.status === "released" || payment.status === "held",
-        )
-        .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
-    [paymentsQuery.data?.data],
-  );
+  const selectedService = bookingData.service || bookingData.customService;
 
-  const availableWalletBalance = useMemo(
-    () => Math.max(walletTopupBalance - walletSpend, 0),
-    [walletTopupBalance, walletSpend],
-  );
+  const requestedHours = useMemo(() => {
+    const parsed = Number.parseFloat(bookingData.requestedHours || "0");
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  }, [bookingData.requestedHours]);
 
-  const estimatedSubtotal = useMemo(() => {
+  const minimumBillableHours = useMemo(() => {
     if (!provider) {
       return 0;
     }
 
-    return bookingData.estimatedDuration.includes("+")
-      ? provider.hourlyRate * 8
-      : provider.hourlyRate *
-          Number.parseInt(bookingData.estimatedDuration.split("-")[1] || "2");
-  }, [bookingData.estimatedDuration, provider]);
+    return selectedService
+      ? (provider.serviceMinimumHours[selectedService] ?? 0)
+      : 0;
+  }, [provider, selectedService]);
 
-  const estimatedTotal = useMemo(
-    () => Number((estimatedSubtotal * 1.05).toFixed(2)),
-    [estimatedSubtotal],
-  );
+  const billableHours = useMemo(() => {
+    if (!requestedHours) {
+      return minimumBillableHours > 0 ? minimumBillableHours : 0;
+    }
+
+    return Math.max(requestedHours, minimumBillableHours);
+  }, [minimumBillableHours, requestedHours]);
+
+  const estimatedTotal = useMemo(() => {
+    if (!provider) {
+      return 0;
+    }
+
+    return Number((provider.hourlyRate * billableHours).toFixed(2));
+  }, [billableHours, provider]);
 
   const walletShortfall = useMemo(
     () => Math.max(estimatedTotal - availableWalletBalance, 0),
     [availableWalletBalance, estimatedTotal],
   );
 
+  const selectedDateKey = useMemo(
+    () => toDateKey(bookingData.selectedDate),
+    [bookingData.selectedDate],
+  );
+
+  const resolvedAvailabilityDay = useMemo(() => {
+    if (!provider || !selectedDateKey) {
+      return null;
+    }
+
+    return resolveAvailabilityForDate(provider.availability, selectedDateKey);
+  }, [provider, selectedDateKey]);
+
+  const availableTimeOptions = useMemo(() => {
+    if (
+      !resolvedAvailabilityDay ||
+      !provider?.availability.hasExplicitAvailability
+    ) {
+      return [];
+    }
+
+    return buildAvailabilityStartTimes(
+      resolvedAvailabilityDay,
+      requestedHours || 0,
+    );
+  }, [provider, requestedHours, resolvedAvailabilityDay]);
+
   const isWalletSufficient = walletShortfall <= 0;
-  const isWalletLoading = isTopupsLoading || paymentsQuery.isLoading;
+  const isWalletLoading = isTopupsLoading || balanceQuery.isLoading;
 
   useEffect(() => {
     if (!providerId) {
@@ -406,7 +361,7 @@ export function BookingWizard({ data }: BookingWizardProps) {
     }
 
     const providerProfile = providerResult.data;
-    const availability = parseAvailability(providerProfile.availability);
+    const availability = normalizeAvailability(providerProfile.availability);
 
     setProvider({
       id: providerProfile.user_id,
@@ -420,10 +375,38 @@ export function BookingWizard({ data }: BookingWizardProps) {
       hourlyRate: providerProfile.hourly_rate ?? 0,
       avatar: providerProfile.profile?.avatar_url ?? "",
       services: providerProfile.services ?? [],
+      serviceMinimumHours: parseServiceMinimumHours(
+        providerProfile.service_minimum_hours,
+      ),
       availability,
     });
     setProviderStatus("ready");
   }, [providerId, providerLoading, providerResult]);
+
+  useEffect(() => {
+    if (!provider?.availability.hasExplicitAvailability) {
+      return;
+    }
+
+    if (!bookingData.selectedTime) {
+      return;
+    }
+
+    const isStillAvailable = availableTimeOptions.some(
+      (option) => option.value === bookingData.selectedTime,
+    );
+
+    if (!isStillAvailable) {
+      setBookingData((prev) => ({
+        ...prev,
+        selectedTime: "",
+      }));
+    }
+  }, [
+    availableTimeOptions,
+    bookingData.selectedTime,
+    provider?.availability.hasExplicitAvailability,
+  ]);
 
   const steps: { id: BookingStep; label: string; icon: any }[] = [
     { id: "service", label: "Select Service", icon: FileText },
@@ -501,6 +484,13 @@ export function BookingWizard({ data }: BookingWizardProps) {
       return;
     }
 
+    if (!provider || provider.hourlyRate <= 0) {
+      setErrorMessage(
+        "This provider is not available for direct hourly booking.",
+      );
+      return;
+    }
+
     if (bookingData.paymentMethod === "wallet" && !isWalletSufficient) {
       setErrorMessage(
         "Wallet balance is insufficient. Please top up to continue.",
@@ -511,6 +501,11 @@ export function BookingWizard({ data }: BookingWizardProps) {
     const serviceType = bookingData.service || bookingData.customService;
     if (!serviceType) {
       setErrorMessage("Please select or describe a service.");
+      return;
+    }
+
+    if (requestedHours <= 0) {
+      setErrorMessage("Enter valid requested hours.");
       return;
     }
 
@@ -548,56 +543,27 @@ export function BookingWizard({ data }: BookingWizardProps) {
       }
 
       const scheduledDate = new Date(bookingData.selectedDate);
-      if (!isValidDate(scheduledDate)) {
+      if (!isValidDate(scheduledDate) || !selectedDateKey) {
         setErrorMessage("Selected date is invalid. Please choose a new date.");
         setIsSubmitting(false);
         return;
       }
 
-      const isAnyTime = bookingData.selectedTime === "Any time";
-
-      if (!isAnyTime && scheduledDate && bookingData.selectedTime) {
-        const [time, meridiem] = bookingData.selectedTime.split(" ");
-        const [hourStr, minuteStr] = time.split(":");
-        let hours = Number.parseInt(hourStr, 10);
-        const minutes = Number.parseInt(minuteStr ?? "0", 10);
-        if (meridiem === "PM" && hours < 12) hours += 12;
-        if (meridiem === "AM" && hours === 12) hours = 0;
-        scheduledDate.setHours(hours, minutes, 0, 0);
-      }
-
-      const amountValue = Number.parseFloat(bookingData.budget || "0");
-      const scheduledDateIso = scheduledDate.toISOString();
-
-      const { error } = await supabase.from("bookings").insert({
-        client_id: user.id,
-        provider_id: providerId,
-        service_type: serviceType,
-        description: bookingData.description,
-        scheduled_date: scheduledDateIso,
-        scheduled_time: isAnyTime ? null : bookingData.selectedTime,
-        duration_hours:
-          Number.parseFloat(bookingData.estimatedDuration) || null,
-        location: { address: bookingData.address },
-        amount: Number.isNaN(amountValue) ? 0 : amountValue,
-        payment_method: bookingData.paymentMethod,
-        payment_status: "pending",
-        status: "pending",
-        photo_urls: photoUrls,
-        special_instructions: bookingData.description,
+      const { error } = await supabase.rpc("create_direct_booking", {
+        p_provider_id: providerId,
+        p_service_type: serviceType,
+        p_description: bookingData.description ?? "",
+        p_scheduled_date: selectedDateKey,
+        p_scheduled_time: bookingData.selectedTime,
+        p_duration_hours: requestedHours,
+        p_location: { address: bookingData.address },
+        p_amount: estimatedTotal,
+        p_special_instructions: bookingData.description,
       });
 
       if (error) {
         throw error;
       }
-
-      await supabase.from("notifications").insert({
-        user_id: providerId,
-        type: "booking_confirmed",
-        title: "New booking request",
-        message: `You have a new booking request for ${bookingData.service || bookingData.customService}.`,
-        related_id: providerId,
-      });
 
       await Promise.all([
         queryClient.invalidateQueries({
@@ -605,6 +571,9 @@ export function BookingWizard({ data }: BookingWizardProps) {
         }),
         queryClient.invalidateQueries({
           queryKey: ["provider_bookings", providerId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["provider_jobs_bookings", providerId],
         }),
       ]);
 
@@ -737,18 +706,10 @@ export function BookingWizard({ data }: BookingWizardProps) {
         );
 
       case "datetime":
-        const toDateKey = (date?: Date) => {
-          if (!date) return null;
-          const time = date.getTime();
-          if (Number.isNaN(time)) return null;
-          return date.toISOString().split("T")[0];
-        };
-        const availability = provider.availability ?? {};
-        const availabilityKeys = Object.keys(availability);
-        const selectedDateStr = toDateKey(bookingData.selectedDate);
-        const availableSlots = selectedDateStr
-          ? availability[selectedDateStr] || []
-          : [];
+        const hasExplicitAvailability =
+          provider.availability.hasExplicitAvailability;
+        const selectedDateStr = selectedDateKey;
+        const availableSlots = availableTimeOptions;
 
         return (
           <div className="space-y-6">
@@ -778,50 +739,86 @@ export function BookingWizard({ data }: BookingWizardProps) {
                   disabled={(date) => {
                     const dateStr = toDateKey(date);
                     if (!dateStr) return true;
-                    if (availabilityKeys.length === 0) return false;
-                    return !availabilityKeys.includes(dateStr);
+                    if (!hasExplicitAvailability) return false;
+                    const resolvedDay = resolveAvailabilityForDate(
+                      provider.availability,
+                      dateStr,
+                    );
+                    return (
+                      buildAvailabilityStartTimes(
+                        resolvedDay,
+                        requestedHours || 0,
+                      ).length === 0
+                    );
                   }}
                   className="rounded-md border"
                 />
                 <p className="text-sm text-gray-500 mt-2">
-                  {availabilityKeys.length === 0
-                    ? "Provider availability is not set. You can choose any date."
-                    : "Available dates are highlighted"}
+                  {hasExplicitAvailability
+                    ? "Available dates depend on the provider's schedule and your requested hours."
+                    : "Provider schedule is not set. Choose a date, then enter a start time."}
                 </p>
               </div>
 
               {/* Time Slots */}
               <div>
-                <Label className="mb-3 block">Select Time</Label>
+                <Label className="mb-3 block">
+                  {hasExplicitAvailability
+                    ? "Select Start Time"
+                    : "Preferred Start Time"}
+                </Label>
                 {!bookingData.selectedDate ? (
                   <div className="text-center py-12 text-gray-500">
                     <Clock className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                     <p>Please select a date first</p>
                   </div>
-                ) : availableSlots.length === 0 ? (
+                ) : hasExplicitAvailability && availableSlots.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <p>No available time slots for this date</p>
                   </div>
+                ) : hasExplicitAvailability ? (
+                  <>
+                    {resolvedAvailabilityDay ? (
+                      <p className="mb-3 text-sm text-gray-500">
+                        {formatAvailabilitySummary(resolvedAvailabilityDay)}
+                      </p>
+                    ) : null}
+                    <div className="grid grid-cols-2 gap-3">
+                      {availableSlots.map((slot) => (
+                        <button
+                          key={slot.value}
+                          onClick={() =>
+                            setBookingData((prev) => ({
+                              ...prev,
+                              selectedTime: slot.value,
+                            }))
+                          }
+                          className={`p-3 border-2 rounded-lg transition-all ${
+                            bookingData.selectedTime === slot.value
+                              ? "border-blue-600 bg-blue-50 text-blue-600 font-semibold"
+                              : "border-gray-200 hover:border-blue-300"
+                          }`}
+                        >
+                          {slot.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {availableSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() =>
-                          setBookingData((prev) => ({
-                            ...prev,
-                            selectedTime: slot,
-                          }))
-                        }
-                        className={`p-3 border-2 rounded-lg transition-all ${
-                          bookingData.selectedTime === slot
-                            ? "border-blue-600 bg-blue-50 text-blue-600 font-semibold"
-                            : "border-gray-200 hover:border-blue-300"
-                        }`}
-                      >
-                        {slot}
-                      </button>
-                    ))}
+                  <div className="space-y-3">
+                    <Input
+                      type="time"
+                      value={bookingData.selectedTime}
+                      onChange={(event) =>
+                        setBookingData((prev) => ({
+                          ...prev,
+                          selectedTime: event.target.value,
+                        }))
+                      }
+                    />
+                    <p className="text-sm text-gray-500">
+                      Choose the time you want the provider to start.
+                    </p>
                   </div>
                 )}
 
@@ -922,44 +919,67 @@ export function BookingWizard({ data }: BookingWizardProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label htmlFor="duration">Estimated Duration</Label>
-                <select
+                <Label htmlFor="duration">Requested Hours</Label>
+                <Input
                   id="duration"
-                  value={bookingData.estimatedDuration}
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  placeholder="2"
+                  value={bookingData.requestedHours}
                   onChange={(e) =>
                     setBookingData({
                       ...bookingData,
-                      estimatedDuration: e.target.value,
+                      requestedHours: e.target.value,
                     })
                   }
-                  className="w-full border rounded-md p-2"
-                >
-                  <option value="1-2">1-2 hours</option>
-                  <option value="2-4">2-4 hours</option>
-                  <option value="4-8">4-8 hours (half day)</option>
-                  <option value="8+">8+ hours (full day)</option>
-                  <option value="multiple">Multiple days</option>
-                </select>
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Enter the number of hours you want to book.
+                </p>
               </div>
 
               <div>
-                <Label htmlFor="budget">Your Budget (Optional)</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="budget"
-                    type="number"
-                    placeholder="Enter amount"
-                    value={bookingData.budget}
-                    onChange={(e) =>
-                      setBookingData({ ...bookingData, budget: e.target.value })
-                    }
-                    className="pl-10"
-                  />
+                <Label>Pricing Summary</Label>
+                <div className="rounded-lg border bg-slate-50 p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Hourly rate</span>
+                    <span className="font-semibold">
+                      {formatCurrency(provider.hourlyRate)}/hr
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Requested hours</span>
+                    <span className="font-semibold">
+                      {requestedHours || 0}h
+                    </span>
+                  </div>
+                  {minimumBillableHours > 0 ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Minimum billable</span>
+                      <span className="font-semibold">
+                        {minimumBillableHours}h
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Billable now</span>
+                    <span className="font-semibold">{billableHours || 0}h</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-semibold text-gray-900">
+                      Booking total
+                    </span>
+                    <span className="font-bold text-blue-600">
+                      {formatCurrency(estimatedTotal)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Materials stay off-platform. If actual work exceeds the
+                    booked hours, the client can send a post-job bonus after
+                    completion.
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  Estimated at ${provider.hourlyRate}/hr
-                </p>
               </div>
             </div>
           </div>
@@ -1085,7 +1105,7 @@ export function BookingWizard({ data }: BookingWizardProps) {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Estimated Total</span>
+                      <span className="text-gray-600">Booking Total</span>
                       <span className="font-semibold">
                         {formatCurrency(estimatedTotal)}
                       </span>
@@ -1119,11 +1139,6 @@ export function BookingWizard({ data }: BookingWizardProps) {
         );
 
       case "review":
-        const estimatedCost = bookingData.estimatedDuration.includes("+")
-          ? provider.hourlyRate * 8
-          : provider.hourlyRate *
-            parseInt(bookingData.estimatedDuration.split("-")[1] || "2");
-
         return (
           <div className="space-y-6">
             <div>
@@ -1190,7 +1205,7 @@ export function BookingWizard({ data }: BookingWizardProps) {
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-gray-600">Time</span>
                   <span className="font-semibold">
-                    {bookingData.selectedTime}
+                    {formatAvailabilityTimeLabel(bookingData.selectedTime)}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
@@ -1200,10 +1215,20 @@ export function BookingWizard({ data }: BookingWizardProps) {
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-600">Est. Duration</span>
-                  <span className="font-semibold">
-                    {bookingData.estimatedDuration} hours
-                  </span>
+                  <span className="text-gray-600">Requested hours</span>
+                  <span className="font-semibold">{requestedHours} hours</span>
+                </div>
+                {minimumBillableHours > 0 ? (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-600">Minimum billable</span>
+                    <span className="font-semibold">
+                      {minimumBillableHours} hours
+                    </span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-600">Billable now</span>
+                  <span className="font-semibold">{billableHours} hours</span>
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-gray-600">Urgency</span>
@@ -1223,30 +1248,37 @@ export function BookingWizard({ data }: BookingWizardProps) {
             {/* Cost Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle>Cost Estimate</CardTitle>
+                <CardTitle>Cost Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between py-2">
                   <span className="text-gray-600">Hourly Rate</span>
-                  <span>${provider.hourlyRate}/hour</span>
+                  <span>{formatCurrency(provider.hourlyRate)}/hour</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="text-gray-600">Estimated Time</span>
-                  <span>{bookingData.estimatedDuration} hours</span>
+                  <span className="text-gray-600">Requested Hours</span>
+                  <span>{requestedHours} hours</span>
                 </div>
+                {minimumBillableHours > 0 ? (
+                  <div className="flex justify-between py-2">
+                    <span className="text-gray-600">Minimum Billable</span>
+                    <span>{minimumBillableHours} hours</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between py-2 border-t">
-                  <span className="text-gray-600">Admin Fee (5%)</span>
-                  <span>${(estimatedCost * 0.05).toFixed(2)}</span>
+                  <span className="text-gray-600">Billable Now</span>
+                  <span>{billableHours} hours</span>
                 </div>
                 <div className="flex justify-between py-3 border-t-2 border-blue-600">
-                  <span className="font-bold text-lg">Estimated Total</span>
+                  <span className="font-bold text-lg">Booking Total</span>
                   <span className="font-bold text-lg text-blue-600">
-                    ${(estimatedCost * 1.05).toFixed(2)}
+                    {formatCurrency(estimatedTotal)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Final price may vary based on actual time spent. You'll be
-                  charged after service completion.
+                  The provider can accept or decline any request. If the job
+                  runs longer than booked, the client can send a post-job bonus.
+                  Materials are always handled off-platform.
                 </p>
               </CardContent>
             </Card>

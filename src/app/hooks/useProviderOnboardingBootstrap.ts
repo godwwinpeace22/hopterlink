@@ -1,19 +1,52 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import {
+  getProviderOnboardingSnapshot,
+  type ProviderOnboardingStep,
+} from "@/lib/providerOnboarding";
+
+export type ProviderOnboardingDocument = {
+  document_type: "id" | "insurance";
+  file_name: string | null;
+  file_url: string;
+  status:
+    | "not_started"
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "expired"
+    | null;
+};
 
 export type ProviderOnboardingBootstrap = {
   emailVerified: boolean;
   phone: string;
   phoneVerified: boolean;
   hasSubmittedVerification: boolean;
-  resumeStep:
-    | "email-verify"
-    | "documents"
-    | "profile"
-    | "availability"
-    | "payment"
-    | "review"
-    | "pending";
+  resumeStep: ProviderOnboardingStep;
+  profile: {
+    full_name: string | null;
+    phone: string | null;
+    phone_verified: boolean | null;
+    avatar_url: string | null;
+    metadata: unknown;
+  } | null;
+  providerProfile: {
+    business_name: string | null;
+    bio: string | null;
+    hourly_rate: number | null;
+    service_areas: string[] | null;
+    services: string[];
+    availability: unknown;
+    verification_status:
+      | "not_started"
+      | "pending"
+      | "approved"
+      | "rejected"
+      | "expired"
+      | null;
+  } | null;
+  documents: ProviderOnboardingDocument[];
 };
 
 export function useProviderOnboardingBootstrap(userId?: string) {
@@ -31,6 +64,9 @@ export function useProviderOnboardingBootstrap(userId?: string) {
           phoneVerified: false,
           hasSubmittedVerification: false,
           resumeStep: "email-verify",
+          profile: null,
+          providerProfile: null,
+          documents: [],
         };
       }
 
@@ -43,17 +79,19 @@ export function useProviderOnboardingBootstrap(userId?: string) {
         supabase.auth.getUser(),
         supabase
           .from("profiles")
-          .select("phone, phone_verified, avatar_url, metadata")
+          .select("full_name, phone, phone_verified, avatar_url, metadata")
           .eq("id", userId)
           .maybeSingle(),
         supabase
           .from("provider_profiles")
-          .select("verification_status, bio, hourly_rate, availability")
+          .select(
+            "business_name, verification_status, bio, hourly_rate, service_areas, services, availability",
+          )
           .eq("user_id", userId)
           .maybeSingle(),
         supabase
           .from("verification_documents")
-          .select("document_type")
+          .select("document_type, file_name, file_url, status")
           .eq("provider_id", userId)
           .in("document_type", ["id", "insurance"]),
       ]);
@@ -73,56 +111,24 @@ export function useProviderOnboardingBootstrap(userId?: string) {
       const emailVerified = Boolean(authData.user?.email_confirmed_at);
       const profileData = profileResult.data;
       const providerData = providerProfileResult.data;
-      const documentTypes = new Set(
-        (documentsResult.data ?? []).map((doc) => doc.document_type),
-      );
-
-      const hasRequiredDocs =
-        documentTypes.has("id") && documentTypes.has("insurance");
-      const hasProfileSetup =
-        Boolean(profileData?.avatar_url) &&
-        Boolean(providerData?.bio) &&
-        providerData?.hourly_rate != null;
-      const hasAvailability =
-        Boolean(providerData?.availability) &&
-        typeof providerData?.availability === "object" &&
-        Object.keys(providerData.availability as Record<string, unknown>)
-          .length > 0;
-
-      const payout = (
-        profileData?.metadata as { payout?: { last4?: string } } | null
-      )?.payout;
-      const hasPaymentSetup = Boolean(payout?.last4);
-
-      const hasSubmittedVerification =
-        providerData?.verification_status === "pending" ||
-        providerData?.verification_status === "approved";
-
-      let resumeStep: ProviderOnboardingBootstrap["resumeStep"] =
-        "email-verify";
-
-      if (!emailVerified) {
-        resumeStep = "email-verify";
-      } else if (!hasRequiredDocs) {
-        resumeStep = "documents";
-      } else if (!hasProfileSetup) {
-        resumeStep = "profile";
-      } else if (!hasAvailability) {
-        resumeStep = "availability";
-      } else if (!hasPaymentSetup) {
-        resumeStep = "payment";
-      } else if (hasSubmittedVerification) {
-        resumeStep = "pending";
-      } else {
-        resumeStep = "review";
-      }
+      const documents =
+        ((documentsResult.data ?? []) as ProviderOnboardingDocument[]) ?? [];
+      const snapshot = getProviderOnboardingSnapshot({
+        emailVerified,
+        profile: profileData,
+        providerProfile: providerData,
+        documents,
+      });
 
       return {
         emailVerified,
         phone: profileData?.phone ?? "",
         phoneVerified: Boolean(profileData?.phone_verified),
-        hasSubmittedVerification,
-        resumeStep,
+        hasSubmittedVerification: snapshot.hasSubmittedVerification,
+        resumeStep: snapshot.resumeStep,
+        profile: profileData,
+        providerProfile: providerData,
+        documents,
       };
     },
   });

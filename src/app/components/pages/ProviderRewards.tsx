@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -43,22 +43,22 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface ProviderRewardsProps {}
 
-const mockProviderData = {
-  name: "John Martinez",
-  email: "john@martinezhandyman.com",
-  memberSince: "2020-03",
-  completedJobs: 234,
-  rating: 4.8,
-  totalReviews: 127,
-  responseTime: "45 min",
-  currentMonthEarnings: 3250,
-  currentCommissionRate: 3.5,
+const defaultProviderData = {
+  name: "",
+  email: "",
+  memberSince: "",
+  completedJobs: 0,
+  rating: 0,
+  totalReviews: 0,
+  responseTime: "",
+  currentMonthEarnings: 0,
+  currentCommissionRate: 5.0,
   standardCommissionRate: 5.0,
-  cashbackBalance: 245.5,
-  lifetimeSavings: 892.75,
-  referralCode: "JOHN-HIVE-2024",
-  referralsCount: 12,
-  referralEarnings: 600,
+  cashbackBalance: 0,
+  lifetimeSavings: 0,
+  referralCode: "",
+  referralsCount: 0,
+  referralEarnings: 0,
 };
 
 const providerBadges = [
@@ -248,8 +248,8 @@ export function ProviderRewards({}: ProviderRewardsProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [copiedCode, setCopiedCode] = useState(false);
-  const [providerData, setProviderData] = useState(mockProviderData);
-  const [isLoading, setIsLoading] = useState(false);
+  const [providerData, setProviderData] = useState(defaultProviderData);
+  const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const unlockedBadges = providerBadges.filter((b) => b.unlocked);
@@ -311,28 +311,24 @@ export function ProviderRewards({}: ProviderRewardsProps) {
       );
       const memberSince = profileResult.data?.created_at
         ? new Date(profileResult.data.created_at).toISOString().slice(0, 7)
-        : mockProviderData.memberSince;
+        : "";
 
       setProviderData({
-        ...mockProviderData,
-        name: profileResult.data?.full_name ?? mockProviderData.name,
-        email: profileResult.data?.email ?? mockProviderData.email,
+        ...defaultProviderData,
+        name: profileResult.data?.full_name ?? "",
+        email: profileResult.data?.email ?? "",
         memberSince,
-        completedJobs:
-          providerProfileResult.data?.jobs_completed ??
-          mockProviderData.completedJobs,
-        rating: providerProfileResult.data?.rating ?? mockProviderData.rating,
-        totalReviews:
-          providerProfileResult.data?.total_reviews ??
-          mockProviderData.totalReviews,
+        completedJobs: providerProfileResult.data?.jobs_completed ?? 0,
+        rating: providerProfileResult.data?.rating ?? 0,
+        totalReviews: providerProfileResult.data?.total_reviews ?? 0,
         responseTime: providerProfileResult.data?.response_time
           ? `${providerProfileResult.data.response_time} min`
-          : mockProviderData.responseTime,
+          : "",
         currentMonthEarnings: monthEarnings,
         currentCommissionRate:
           providerProfileResult.data?.verification_status === "approved"
-            ? mockProviderData.currentCommissionRate
-            : mockProviderData.standardCommissionRate,
+            ? 3.5
+            : 5.0,
       });
 
       setIsLoading(false);

@@ -2,6 +2,15 @@ const joinPath = (base: string, segment: string) => `${base}/${segment}`;
 
 const providerRoot = "/dashboard/provider";
 const clientRoot = "/dashboard/client";
+const adminRoot = "/dashboard/admin";
+
+const adminSections = {
+  overview: "overview",
+  users: "users",
+  verification: "verification",
+  disputes: "disputes",
+  revenue: "revenue",
+} as const;
 
 const providerSections = {
   overview: "overview",
@@ -76,6 +85,8 @@ export const paths = {
   providerProfile: "/providers/:providerId",
   howItWorks: "/how-it-works",
   about: "/about",
+  terms: "/terms",
+  privacy: "/privacy",
   auth: {
     signIn: "/signin",
     clientSignup: "/client-signup",
@@ -129,6 +140,12 @@ export const paths = {
       }
 
       return joinPath(clientRoot, clientSections[key]);
+    },
+    admin: {
+      root: adminRoot,
+      sections: adminSections,
+      absolute: (section: keyof typeof adminSections) =>
+        joinPath(adminRoot, adminSections[section]),
     },
   },
   provider: {

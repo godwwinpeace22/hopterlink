@@ -11,6 +11,8 @@ type CreateCheckoutPayload = {
   amountCents?: number;
   currency?: string;
   idempotencyKey?: string;
+  successUrl?: string;
+  cancelUrl?: string;
 };
 
 const json = (status: number, body: Record<string, unknown>) =>
@@ -18,6 +20,25 @@ const json = (status: number, body: Record<string, unknown>) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+
+const isAllowedRedirectUrl = (candidate: string, siteUrl: string) => {
+  try {
+    const url = new URL(candidate);
+
+    if (url.protocol === "hoptalinkmobile:") {
+      return true;
+    }
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return false;
+    }
+
+    const allowedOrigin = new URL(siteUrl).origin;
+    return url.origin === allowedOrigin;
+  } catch {
+    return false;
+  }
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -120,8 +141,20 @@ Deno.serve(async (req: Request) => {
     req.headers.get("origin") ??
     "http://localhost:5173";
 
-  const successUrl = `${siteUrl}/dashboard/client/wallet?topup=success&session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${siteUrl}/dashboard/client/wallet?topup=cancel`;
+  const requestedSuccessUrl = payload.successUrl?.trim();
+  const requestedCancelUrl = payload.cancelUrl?.trim();
+
+  const defaultSuccessUrl = `${siteUrl}/dashboard/client/wallet?topup=success&session_id={CHECKOUT_SESSION_ID}`;
+  const defaultCancelUrl = `${siteUrl}/dashboard/client/wallet?topup=cancel`;
+
+  const successUrl =
+    requestedSuccessUrl && isAllowedRedirectUrl(requestedSuccessUrl, siteUrl)
+      ? requestedSuccessUrl
+      : defaultSuccessUrl;
+  const cancelUrl =
+    requestedCancelUrl && isAllowedRedirectUrl(requestedCancelUrl, siteUrl)
+      ? requestedCancelUrl
+      : defaultCancelUrl;
 
   const { data: insertedTopup, error: insertError } = await serviceClient
     .from("wallet_topups")

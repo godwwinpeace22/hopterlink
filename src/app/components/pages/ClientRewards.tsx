@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -42,18 +43,18 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface ClientRewardsProps {}
 
-const mockClientData = {
-  name: "Sarah Johnson",
-  email: "sarah.j@email.com",
-  memberSince: "2024-01",
-  totalSpent: 2450,
-  currentPoints: 2450,
-  currentTier: "Gold",
-  cashbackBalance: 36.75,
-  lifetimeCashback: 122.5,
-  referralCode: "SARAH2024",
-  referralsCount: 8,
-  referralEarnings: 200,
+const defaultClientData = {
+  name: "",
+  email: "",
+  memberSince: "",
+  totalSpent: 0,
+  currentPoints: 0,
+  currentTier: "Bronze",
+  cashbackBalance: 0,
+  lifetimeCashback: 0,
+  referralCode: "",
+  referralsCount: 0,
+  referralEarnings: 0,
 };
 
 const tierLevels = [
@@ -189,61 +190,25 @@ const rewardsMarketplace = [
   },
 ];
 
-const mockRecentActivity = [
-  {
-    id: 1,
-    type: "earned",
-    description: "Plumbing service booking",
-    points: 125,
-    date: "2024-12-24",
-  },
-  {
-    id: 2,
-    type: "earned",
-    description: "Cashback earned",
-    amount: 1.25,
-    date: "2024-12-24",
-  },
-  {
-    id: 3,
-    type: "redeemed",
-    description: "$10 Service Credit",
-    points: -1000,
-    date: "2024-12-20",
-  },
-  {
-    id: 4,
-    type: "earned",
-    description: "Review bonus",
-    points: 50,
-    date: "2024-12-18",
-  },
-  {
-    id: 5,
-    type: "earned",
-    description: "Referral bonus - John Doe completed job",
-    points: 2500,
-    date: "2024-12-15",
-  },
-  {
-    id: 6,
-    type: "earned",
-    description: "Cleaning service booking",
-    points: 180,
-    date: "2024-12-10",
-  },
-];
+type RecentActivity = {
+  id: string | number;
+  type: string;
+  description: string;
+  points?: number;
+  amount?: number;
+  date: string;
+};
 
 export function ClientRewards({}: ClientRewardsProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [copiedCode, setCopiedCode] = useState(false);
   const [selectedReward, setSelectedReward] = useState<string | null>(null);
-  const [clientData, setClientData] = useState(mockClientData);
+  const [clientData, setClientData] = useState(defaultClientData);
   const [marketplaceRewards, setMarketplaceRewards] =
     useState(rewardsMarketplace);
-  const [recentActivity, setRecentActivity] = useState(mockRecentActivity);
-  const [isLoading, setIsLoading] = useState(false);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -292,30 +257,23 @@ export function ClientRewards({}: ClientRewardsProps) {
 
       const memberSince = profileResult.data?.created_at
         ? new Date(profileResult.data.created_at).toISOString().slice(0, 7)
-        : mockClientData.memberSince;
+        : "";
 
       if (rewardsResult.error) {
         setErrorMessage(rewardsResult.error.message);
       }
 
-      if (profileResult.data || rewardsResult.data) {
-        setClientData({
-          ...mockClientData,
-          name: profileResult.data?.full_name ?? mockClientData.name,
-          email: profileResult.data?.email ?? mockClientData.email,
-          memberSince,
-          currentPoints:
-            rewardsResult.data?.points ?? mockClientData.currentPoints,
-          cashbackBalance:
-            rewardsResult.data?.cashback ?? mockClientData.cashbackBalance,
-          currentTier: rewardsResult.data?.tier ?? mockClientData.currentTier,
-          referralCode:
-            rewardsResult.data?.referral_code ?? mockClientData.referralCode,
-          referralsCount:
-            rewardsResult.data?.referrals_count ??
-            mockClientData.referralsCount,
-        });
-      }
+      setClientData({
+        ...defaultClientData,
+        name: profileResult.data?.full_name ?? "",
+        email: profileResult.data?.email ?? "",
+        memberSince,
+        currentPoints: rewardsResult.data?.points ?? 0,
+        cashbackBalance: rewardsResult.data?.cashback ?? 0,
+        currentTier: rewardsResult.data?.tier ?? "Bronze",
+        referralCode: rewardsResult.data?.referral_code ?? "",
+        referralsCount: rewardsResult.data?.referrals_count ?? 0,
+      });
 
       if (!transactionsResult.error) {
         const mappedActivity = (transactionsResult.data ?? []).map(
@@ -392,7 +350,7 @@ export function ClientRewards({}: ClientRewardsProps) {
 
   const handleRedeemReward = async (rewardId: string, pointsCost: number) => {
     if (!user?.id) {
-      alert("You must be signed in to redeem rewards.");
+      toast.error("You must be signed in to redeem rewards.");
       return;
     }
 
@@ -416,18 +374,18 @@ export function ClientRewards({}: ClientRewardsProps) {
           ...prev,
           currentPoints: newPoints,
         }));
-        alert(
-          "Reward redeemed successfully! Check your account for the credit/perk.",
+        toast.success(
+          "Reward redeemed! Check your account for the credit/perk.",
         );
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to redeem reward.";
-        alert(message);
+        toast.error(message);
       } finally {
         setSelectedReward(null);
       }
     } else {
-      alert(
+      toast.error(
         `You need ${pointsCost - clientData.currentPoints} more points to redeem this reward.`,
       );
     }

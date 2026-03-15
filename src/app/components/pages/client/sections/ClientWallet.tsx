@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Plus, Wallet } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "@/lib/router";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -43,6 +43,7 @@ type ClientEscrowPayment = {
   amount: number;
   status: string;
   created_at: string | null;
+  metadata: { payment_kind?: string; note?: string | null } | null;
   booking: { service_type: string | null } | null;
   provider: { full_name: string | null } | null;
 };
@@ -63,7 +64,7 @@ const statusClass: Record<string, string> = {
   released: "bg-emerald-100 text-emerald-700",
   failed: "bg-red-100 text-red-700",
   canceled: "bg-slate-100 text-slate-700",
-  refunded: "bg-blue-100 text-blue-700",
+  refunded: "bg-slate-100 text-slate-700",
 };
 
 const formatAmount = (amount: number) =>
@@ -103,6 +104,7 @@ export const ClientWallet = () => {
             amount,
             status,
             created_at,
+            metadata,
             booking:bookings (
               service_type
             ),
@@ -113,6 +115,15 @@ export const ClientWallet = () => {
         )
         .eq("client_id", user?.id ?? "")
         .order("created_at", { ascending: false }),
+    { enabled: Boolean(user?.id) },
+  );
+
+  const balanceQuery = useSupabaseQuery(
+    ["client_wallet_balance", user?.id],
+    () =>
+      supabase.rpc("compute_wallet_balance", {
+        p_user_id: user?.id ?? "",
+      }),
     { enabled: Boolean(user?.id) },
   );
 
@@ -146,19 +157,20 @@ export const ClientWallet = () => {
     params.delete("session_id");
 
     const search = params.toString();
+    const newUrl = search
+      ? `${location.pathname}?${search}`
+      : location.pathname;
 
-    navigate(
-      {
-        pathname: location.pathname,
-        search: search ? `?${search}` : "",
-      },
-      { replace: true },
-    );
+    navigate(newUrl, { replace: true });
   }, [location.pathname, location.search, navigate, refreshTopups]);
 
-  const isLoading = paymentsQuery.isLoading || isTopupsLoading;
+  const isLoading =
+    paymentsQuery.isLoading || isTopupsLoading || balanceQuery.isLoading;
   const errorMessage =
-    paymentsQuery.data?.error?.message ?? topupsErrorMessage ?? null;
+    paymentsQuery.data?.error?.message ??
+    balanceQuery.data?.error?.message ??
+    topupsErrorMessage ??
+    null;
 
   const payments = useMemo<ClientEscrowPayment[]>(() => {
     const data = paymentsQuery.data?.data ?? [];
@@ -168,31 +180,37 @@ export const ClientWallet = () => {
       amount: Number(payment.amount ?? 0),
       status: payment.status ?? "pending",
       created_at: payment.created_at,
+      metadata: payment.metadata,
       booking: payment.booking,
       provider: payment.provider,
     }));
   }, [paymentsQuery.data?.data]);
 
+  const availableBalance = Math.max(Number(balanceQuery.data?.data ?? 0), 0);
+
   const topupBalance = useMemo(
     () =>
-      topups
-        .filter((topup) => topup.status === "succeeded")
-        .reduce((sum, topup) => sum + topup.amount_cents / 100, 0),
+      topups.reduce((sum, topup) => {
+        if (topup.status !== "succeeded") {
+          return sum;
+        }
+
+        return sum + topup.amount_cents / 100;
+      }, 0),
     [topups],
   );
 
   const walletSpend = useMemo(
     () =>
-      payments
-        .filter(
-          (payment) =>
-            payment.status === "released" || payment.status === "held",
-        )
-        .reduce((sum, payment) => sum + payment.amount, 0),
+      payments.reduce((sum, payment) => {
+        if (payment.status === "failed" || payment.status === "canceled") {
+          return sum;
+        }
+
+        return sum + Math.abs(payment.amount);
+      }, 0),
     [payments],
   );
-
-  const availableBalance = Math.max(topupBalance - walletSpend, 0);
 
   const transactions = useMemo<ClientWalletTransaction[]>(() => {
     const topupTransactions: ClientWalletTransaction[] = topups.map(
@@ -211,7 +229,10 @@ export const ClientWallet = () => {
       type: "payment",
       amount: -Math.abs(payment.amount),
       status: payment.status,
-      description: `${payment.booking?.service_type ?? "Service"} • ${payment.provider?.full_name ?? "Provider"}`,
+      description:
+        payment.metadata?.payment_kind === "booking_bonus"
+          ? `Booking Bonus • ${payment.booking?.service_type ?? "Service"} • ${payment.provider?.full_name ?? "Provider"}`
+          : `${payment.booking?.service_type ?? "Service"} • ${payment.provider?.full_name ?? "Provider"}`,
       createdAt: payment.created_at ?? new Date().toISOString(),
     }));
 
@@ -261,7 +282,7 @@ export const ClientWallet = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
@@ -316,7 +337,7 @@ export const ClientWallet = () => {
                   >
                     {createTopupCheckoutMutation.isPending
                       ? "Redirecting..."
-                      : "Continue to Stripe"}
+                      : "Continue"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

@@ -1,0 +1,23 @@
+-- ============================================================================
+-- PUSH NOTIFICATIONS VIA DATABASE WEBHOOK
+--
+-- The send-push-notification Edge Function is triggered by a Supabase
+-- Database Webhook (configured in the Dashboard), NOT via pg_net or SQL.
+--
+-- Setup steps:
+--   1. Deploy the Edge Function:
+--        supabase functions deploy send-push-notification
+--
+--   2. In Supabase Dashboard → Database → Webhooks → Create Webhook:
+--        Table:    notifications
+--        Events:   INSERT
+--        Type:     Supabase Edge Function
+--        Function: send-push-notification
+--
+--   3. Optionally set a WEBHOOK_SECRET in Edge Function secrets:
+--        supabase secrets set WEBHOOK_SECRET=<your-secret>
+--      Then add the same secret as an HTTP header in the webhook config:
+--        Authorization: Bearer <your-secret>
+--
+-- No SQL trigger is needed — the Dashboard webhook handles it.
+-- ============================================================================

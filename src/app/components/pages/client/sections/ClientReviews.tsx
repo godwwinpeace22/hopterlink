@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { PageHeader } from "../../../ui/page-header";
 import { CheckCircle, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -167,7 +168,8 @@ export const ClientReviews = () => {
     null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6 pt-6">
+      <PageHeader title="Reviews" hideBack />
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

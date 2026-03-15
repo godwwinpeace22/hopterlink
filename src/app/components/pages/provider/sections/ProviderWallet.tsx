@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../../ui/button";
 import {
   Card,
@@ -22,6 +22,7 @@ import {
 import { Badge } from "../../../ui/badge";
 import { Input } from "../../../ui/input";
 import { Label } from "../../../ui/label";
+import { PageHeader } from "../../../ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -42,10 +43,7 @@ import {
 } from "../../../ui/table";
 import { WALLET_CONFIG, WALLET_STATUS_LABELS } from "@/app/config/walletConfig";
 import {
-  ProviderWalletMetadata,
   ProviderWalletTransaction,
-  WithdrawalRequest,
-  buildWalletMetadataPatch,
   normalizeProviderWalletMetadata,
 } from "@/app/lib/providerWalletMetadata";
 
@@ -54,23 +52,46 @@ type EarningPayment = {
   amount: number;
   status: string;
   created_at: string | null;
+  metadata: { payment_kind?: string; note?: string | null } | null;
   booking: { service_type: string | null } | null;
   client: { full_name: string | null } | null;
 };
 
+type ProviderWithdrawal = {
+  id: string;
+  amount: number;
+  status: string;
+  requestedAt: string;
+  payoutReference?: string;
+  note?: string;
+};
+
 const walletStatusBadgeClass: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
   requested: "bg-amber-100 text-amber-700",
   queued: "bg-orange-100 text-orange-700",
-  processing: "bg-blue-100 text-blue-700",
+  processing: "bg-[#FFF1D6] text-[#A15C00]",
   paid: "bg-emerald-100 text-emerald-700",
   failed: "bg-red-100 text-red-700",
+  rejected: "bg-red-100 text-red-700",
   cancelled: "bg-slate-100 text-slate-700",
+};
+
+const withdrawalStatusLabels: Record<string, string> = {
+  pending: "Pending",
+  requested: WALLET_STATUS_LABELS.requested,
+  queued: WALLET_STATUS_LABELS.queued,
+  processing: WALLET_STATUS_LABELS.processing,
+  paid: WALLET_STATUS_LABELS.paid,
+  failed: WALLET_STATUS_LABELS.failed,
+  rejected: "Rejected",
+  cancelled: WALLET_STATUS_LABELS.cancelled,
 };
 
 const earningStatusBadgeClass: Record<string, string> = {
   released: "bg-emerald-100 text-emerald-700",
   held: "bg-amber-100 text-amber-700",
-  pending: "bg-blue-100 text-blue-700",
+  pending: "bg-[#FFF1D6] text-[#A15C00]",
   refunded: "bg-red-100 text-red-700",
   disputed: "bg-red-100 text-red-700",
 };
@@ -126,6 +147,7 @@ export const ProviderWallet = () => {
             provider_amount,
             status,
             created_at,
+            metadata,
             booking:bookings (
               service_type
             ),
@@ -150,9 +172,24 @@ export const ProviderWallet = () => {
     { enabled: Boolean(user?.id) },
   );
 
-  const isLoading = paymentsQuery.isLoading || profileMetadataQuery.isLoading;
+  const withdrawalsQuery = useSupabaseQuery(
+    ["provider_withdrawal_requests", user?.id],
+    () =>
+      supabase
+        .from("withdrawal_requests")
+        .select("id, amount, status, requested_at, payout_reference, note")
+        .eq("provider_id", user?.id ?? "")
+        .order("requested_at", { ascending: false }),
+    { enabled: Boolean(user?.id) },
+  );
+
+  const isLoading =
+    paymentsQuery.isLoading ||
+    profileMetadataQuery.isLoading ||
+    withdrawalsQuery.isLoading;
   const errorMessage =
     paymentsQuery.data?.error?.message ??
+    withdrawalsQuery.data?.error?.message ??
     profileMetadataQuery.data?.error?.message ??
     null;
 
@@ -164,6 +201,7 @@ export const ProviderWallet = () => {
       amount: Number(payment.provider_amount ?? 0),
       status: payment.status ?? "pending",
       created_at: payment.created_at,
+      metadata: payment.metadata,
       booking: payment.booking,
       client: payment.client,
     }));
@@ -176,6 +214,19 @@ export const ProviderWallet = () => {
       ),
     [profileMetadataQuery.data?.data?.metadata],
   );
+
+  const withdrawalRequests = useMemo<ProviderWithdrawal[]>(() => {
+    const data = withdrawalsQuery.data?.data ?? [];
+
+    return data.map((request) => ({
+      id: request.id,
+      amount: Number(request.amount ?? 0),
+      status: request.status ?? "pending",
+      requestedAt: request.requested_at ?? new Date().toISOString(),
+      payoutReference: request.payout_reference ?? undefined,
+      note: request.note ?? undefined,
+    }));
+  }, [withdrawalsQuery.data?.data]);
 
   const releasedEarnings = useMemo(
     () =>
@@ -196,21 +247,33 @@ export const ProviderWallet = () => {
     [payments],
   );
 
-  const reservedForWithdrawal = useMemo(
+  const totalCommittedWithdrawals = useMemo(
     () =>
-      walletMetadata.withdrawalRequests
+      withdrawalRequests
         .filter(
           (request) =>
+            request.status !== "rejected" && request.status !== "cancelled",
+        )
+        .reduce((sum, request) => sum + request.amount, 0),
+    [withdrawalRequests],
+  );
+
+  const pendingWithdrawals = useMemo(
+    () =>
+      withdrawalRequests
+        .filter(
+          (request) =>
+            request.status === "pending" ||
             request.status === "requested" ||
             request.status === "queued" ||
             request.status === "processing",
         )
         .reduce((sum, request) => sum + request.amount, 0),
-    [walletMetadata.withdrawalRequests],
+    [withdrawalRequests],
   );
 
   const availableBalance = Math.max(
-    releasedEarnings - reservedForWithdrawal,
+    releasedEarnings - totalCommittedWithdrawals,
     0,
   );
 
@@ -236,13 +299,16 @@ export const ProviderWallet = () => {
         amount: payment.amount,
         type: "earning",
         status: payment.status,
-        description: `${payment.booking?.service_type ?? "Service"} • ${payment.client?.full_name ?? "Client"}`,
+        description:
+          payment.metadata?.payment_kind === "booking_bonus"
+            ? `Booking Bonus • ${payment.booking?.service_type ?? "Service"} • ${payment.client?.full_name ?? "Client"}`
+            : `${payment.booking?.service_type ?? "Service"} • ${payment.client?.full_name ?? "Client"}`,
         createdAt: payment.created_at ?? new Date().toISOString(),
       }),
     );
 
     const withdrawalTransactions: ProviderWalletTransaction[] =
-      walletMetadata.withdrawalRequests.map((request) => ({
+      withdrawalRequests.map((request) => ({
         id: `withdraw-${request.id}`,
         amount: -Math.abs(request.amount),
         type: "withdrawal",
@@ -256,7 +322,7 @@ export const ProviderWallet = () => {
         new Date(second.createdAt).getTime() -
         new Date(first.createdAt).getTime(),
     );
-  }, [payments, walletMetadata.withdrawalRequests]);
+  }, [payments, withdrawalRequests]);
 
   const canWithdraw =
     walletMetadata.bankAccount?.verified &&
@@ -266,37 +332,6 @@ export const ProviderWallet = () => {
   const exceedsAvailableBalance =
     Number.isFinite(withdrawAmountNumber) &&
     withdrawAmountNumber > availableBalance;
-
-  const updateWalletMetadataMutation = useMutation({
-    mutationFn: async (updatedWalletMetadata: ProviderWalletMetadata) => {
-      if (!user?.id) {
-        throw new Error("User not found.");
-      }
-
-      const currentMetadata = profileMetadataQuery.data?.data?.metadata ?? null;
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          metadata: buildWalletMetadataPatch(
-            currentMetadata,
-            updatedWalletMetadata,
-          ),
-        })
-        .eq("id", user.id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return updatedWalletMetadata;
-    },
-    onSuccess: (updatedWalletMetadata) => {
-      queryClient.invalidateQueries({
-        queryKey: ["profile_metadata", user?.id],
-      });
-    },
-  });
 
   const handleWithdraw = async () => {
     const amount = Number(withdrawAmount);
@@ -326,24 +361,22 @@ export const ProviderWallet = () => {
     setIsSubmitting(true);
 
     try {
-      const request: WithdrawalRequest = {
-        id: crypto.randomUUID(),
-        amount,
-        status: "requested",
-        requestedAt: new Date().toISOString(),
-      };
+      const { error } = await supabase.rpc("request_withdrawal", {
+        p_amount: amount,
+        p_currency: WALLET_CONFIG.currency,
+        p_note: null,
+      });
 
-      const updatedWalletMetadata: ProviderWalletMetadata = {
-        ...walletMetadata,
-        withdrawalRequests: [request, ...walletMetadata.withdrawalRequests],
-      };
+      if (error) {
+        throw error;
+      }
 
-      await updateWalletMetadataMutation.mutateAsync(updatedWalletMetadata);
+      await queryClient.invalidateQueries({
+        queryKey: ["provider_withdrawal_requests", user?.id],
+      });
       setWithdrawAmount("");
       setWithdrawDialogOpen(false);
-      toast.success(
-        "Withdrawal request submitted for manual payout processing.",
-      );
+      toast.success("Withdrawal request submitted for payout processing.");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to submit request.";
@@ -354,7 +387,8 @@ export const ProviderWallet = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
+      <PageHeader title="Wallet" hideBack />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
@@ -582,7 +616,7 @@ export const ProviderWallet = () => {
                     />
                   ))}
                 </div>
-              ) : walletMetadata.withdrawalRequests.length === 0 ? (
+              ) : withdrawalRequests.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
                   No withdrawals yet.
                 </div>
@@ -597,7 +631,7 @@ export const ProviderWallet = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {walletMetadata.withdrawalRequests.map((request) => (
+                    {withdrawalRequests.map((request) => (
                       <TableRow key={request.id}>
                         <TableCell>{formatDate(request.requestedAt)}</TableCell>
                         <TableCell className="font-medium">
@@ -606,13 +640,17 @@ export const ProviderWallet = () => {
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className={walletStatusBadgeClass[request.status]}
+                            className={
+                              walletStatusBadgeClass[request.status] ??
+                              "bg-slate-100 text-slate-700"
+                            }
                           >
-                            {WALLET_STATUS_LABELS[request.status]}
+                            {withdrawalStatusLabels[request.status] ??
+                              request.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {request.note || "—"}
+                          {request.payoutReference ?? request.note ?? "—"}
                         </TableCell>
                       </TableRow>
                     ))}

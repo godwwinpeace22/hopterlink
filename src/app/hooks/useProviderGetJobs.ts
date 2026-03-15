@@ -41,41 +41,67 @@ export function useProviderGetJobs(userId?: string | null) {
   const query = useQuery({
     queryKey: ["provider-job-board", userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("jobs")
-        .select(
-          `
-          id,
-          title,
-          category,
-          description,
-          location,
-          urgency,
-          created_at,
-          budget_min,
-          budget_max,
-          photo_urls,
-          metadata,
-          quotes:quotes (
-            id,
-            provider_id,
-            amount,
-            estimated_duration,
-            message,
-            created_at,
-            status
-          ),
-          client:profiles!jobs_client_id_fkey (
-            id,
-            full_name
-          )
-        `,
-        )
-        .eq("status", "open")
-        .order("created_at", { ascending: false });
+      const [{ data: myQuotes, error: quotesError }, { data, error }] =
+        await Promise.all([
+          userId
+            ? supabase
+                .from("quotes")
+                .select(
+                  "id, job_id, amount, estimated_duration, message, created_at, status",
+                )
+                .eq("provider_id", userId)
+            : Promise.resolve({ data: [], error: null }),
+          supabase
+            .from("jobs")
+            .select(
+              `
+              id,
+              title,
+              category,
+              description,
+              location,
+              urgency,
+              created_at,
+              budget_min,
+              budget_max,
+              photo_urls,
+              quotes_count,
+              metadata,
+              client:profiles!jobs_client_id_fkey (
+                id,
+                full_name
+              )
+            `,
+            )
+            .in("status", ["open", "quoted"])
+            .order("created_at", { ascending: false }),
+        ]);
+
+      if (quotesError) {
+        throw quotesError;
+      }
 
       if (error) {
         throw error;
+      }
+
+      const latestQuoteByJob = new Map<
+        string,
+        NonNullable<typeof myQuotes>[number]
+      >();
+
+      for (const quote of myQuotes ?? []) {
+        const existing = latestQuoteByJob.get(quote.job_id);
+        if (!existing) {
+          latestQuoteByJob.set(quote.job_id, quote);
+          continue;
+        }
+
+        const existingTime = existing.created_at ?? "";
+        const nextTime = quote.created_at ?? "";
+        if (nextTime >= existingTime) {
+          latestQuoteByJob.set(quote.job_id, quote);
+        }
       }
 
       return (data ?? []).map((job) => {
@@ -107,12 +133,7 @@ export function useProviderGetJobs(userId?: string | null) {
             : "";
 
         const client = getFirst(job.client);
-
-        const providerQuote =
-          userId && job.quotes
-            ? (job.quotes.find((quote) => quote?.provider_id === userId) ??
-              null)
-            : null;
+        const providerQuote = latestQuoteByJob.get(job.id) ?? null;
         const hasQuoted = Boolean(providerQuote);
 
         return {
@@ -128,7 +149,7 @@ export function useProviderGetJobs(userId?: string | null) {
           postedAt: job.created_at ?? null,
           postedDate: formatDate(job.created_at),
           clientName: client?.full_name ?? "Client",
-          quotesCount: job.quotes?.length ?? 0,
+          quotesCount: job.quotes_count ?? 0,
           photos: job.photo_urls ?? [],
           hasQuoted,
           providerQuote: providerQuote

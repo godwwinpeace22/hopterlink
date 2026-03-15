@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@/lib/router";
 import {
   Star,
   MapPin,
@@ -8,13 +8,33 @@ import {
   Search,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockProviders, type MockProvider } from "@/app/data/mockProviders";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useState, useMemo } from "react";
 
-const VISIBLE_ROWS = 2; // 3 columns × 2 rows = 6 cards visible without login
+const VISIBLE_ROWS = 2;
 const CARDS_PER_ROW = 3;
 const VISIBLE_COUNT = VISIBLE_ROWS * CARDS_PER_ROW;
 
-function availabilityColor(status: MockProvider["availability"]) {
+type ProviderListing = {
+  id: string;
+  name: string;
+  avatar: string;
+  tagline: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  completedJobs: number;
+  hourlyRate: number;
+  location: string;
+  verified: boolean;
+  skills: string[];
+  portfolio: string[];
+  availability: "available" | "busy" | "offline";
+  responseTime: string;
+};
+
+function availabilityColor(status: ProviderListing["availability"]) {
   switch (status) {
     case "available":
       return "bg-green-500";
@@ -25,7 +45,7 @@ function availabilityColor(status: MockProvider["availability"]) {
   }
 }
 
-function availabilityLabel(status: MockProvider["availability"]) {
+function availabilityLabel(status: ProviderListing["availability"]) {
   switch (status) {
     case "available":
       return "Available";
@@ -36,7 +56,14 @@ function availabilityLabel(status: MockProvider["availability"]) {
   }
 }
 
-function ProviderCard({ provider }: { provider: MockProvider }) {
+function formatResponseTime(minutes: number | null): string {
+  if (!minutes) return "Flexible";
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
+  return `${Math.round(minutes / 1440)}d`;
+}
+
+function ProviderCard({ provider }: { provider: ProviderListing }) {
   return (
     <Link
       to={`/providers/${provider.id}`}
@@ -44,11 +71,15 @@ function ProviderCard({ provider }: { provider: MockProvider }) {
     >
       {/* Cover / portfolio preview */}
       <div className="relative h-36 bg-gray-100 overflow-hidden">
-        <img
-          src={provider.portfolio[0]}
-          alt=""
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {provider.portfolio[0] ? (
+          <img
+            src={provider.portfolio[0]}
+            alt=""
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100" />
+        )}
         <div className="absolute top-3 right-3">
           <span
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full text-white ${availabilityColor(provider.availability)}`}
@@ -65,7 +96,10 @@ function ProviderCard({ provider }: { provider: MockProvider }) {
         <div className="flex items-center gap-3 mb-3">
           <div className="relative">
             <img
-              src={provider.avatar}
+              src={
+                provider.avatar ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(provider.name)}&background=F7C876&color=fff`
+              }
               alt={provider.name}
               className="h-12 w-12 rounded-full object-cover border-2 border-white shadow"
               onError={(e) => {
@@ -91,16 +125,18 @@ function ProviderCard({ provider }: { provider: MockProvider }) {
         <div className="flex items-center gap-4 text-xs text-gray-600 mb-3">
           <span className="flex items-center gap-1">
             <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-            {provider.rating} ({provider.reviewCount})
+            {provider.rating.toFixed(1)} ({provider.reviewCount})
           </span>
           <span className="flex items-center gap-1">
             <Briefcase className="h-3.5 w-3.5" />
             {provider.completedJobs} jobs
           </span>
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5" />
-            {provider.location.split(",")[0]}
-          </span>
+          {provider.location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5" />
+              {provider.location.split(",")[0]}
+            </span>
+          )}
         </div>
 
         {/* Skills */}
@@ -136,14 +172,93 @@ function ProviderCard({ provider }: { provider: MockProvider }) {
   );
 }
 
+function useProviderListings() {
+  return useQuery({
+    queryKey: ["public-providers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("provider_profiles")
+        .select(
+          `
+          user_id,
+          business_name,
+          bio,
+          services,
+          hourly_rate,
+          service_areas,
+          rating,
+          total_reviews,
+          jobs_completed,
+          verification_status,
+          availability,
+          response_time,
+          portfolio_urls,
+          profile:profiles!provider_profiles_user_id_fkey (
+            full_name,
+            avatar_url,
+            location
+          )
+        `,
+        )
+        .eq("verification_status", "approved")
+        .order("rating", { ascending: false });
+
+      if (error) throw error;
+
+      return (data ?? []).map((p): ProviderListing => {
+        const profile = Array.isArray(p.profile) ? p.profile[0] : p.profile;
+        const availObj = p.availability as Record<string, unknown> | null;
+        const hasAvailability = availObj && Object.keys(availObj).length > 0;
+        const locationObj = profile?.location as {
+          city?: string;
+          address?: string;
+        } | null;
+
+        return {
+          id: p.user_id,
+          name: profile?.full_name ?? p.business_name ?? "Service Provider",
+          avatar: profile?.avatar_url ?? "",
+          tagline:
+            p.business_name ?? p.services?.[0] ?? "Professional Services",
+          category: p.services?.[0] ?? "General",
+          rating: p.rating ?? 0,
+          reviewCount: p.total_reviews ?? 0,
+          completedJobs: p.jobs_completed ?? 0,
+          hourlyRate: p.hourly_rate ?? 0,
+          location: locationObj?.city ?? p.service_areas?.[0] ?? "",
+          verified: p.verification_status === "approved",
+          skills: p.services ?? [],
+          portfolio: p.portfolio_urls ?? [],
+          availability: hasAvailability ? "available" : "offline",
+          responseTime: formatResponseTime(p.response_time),
+        };
+      });
+    },
+  });
+}
+
 export function Providers() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const showAll = !!user;
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: providers = [], isLoading } = useProviderListings();
+
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return providers;
+    const q = searchQuery.toLowerCase();
+    return providers.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.tagline.toLowerCase().includes(q) ||
+        p.skills.some((s) => s.toLowerCase().includes(q)),
+    );
+  }, [providers, searchQuery]);
 
   const visibleProviders = showAll
-    ? mockProviders
-    : mockProviders.slice(0, VISIBLE_COUNT);
+    ? filtered
+    : filtered.slice(0, VISIBLE_COUNT);
 
   return (
     <section className="py-12 lg:py-16">
@@ -170,6 +285,8 @@ export function Providers() {
             <input
               type="text"
               placeholder="Search by name, skill, or category…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-amber-500 transition-colors"
             />
           </div>
@@ -177,19 +294,25 @@ export function Providers() {
 
         {/* Grid */}
         <div className="relative">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visibleProviders.map((provider) => (
-              <ProviderCard key={provider.id} provider={provider} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="text-center py-12 text-gray-500">
+              Loading providers...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visibleProviders.map((provider) => (
+                <ProviderCard key={provider.id} provider={provider} />
+              ))}
+            </div>
+          )}
 
           {/* Fade overlay + sign-up prompt for unauthenticated users */}
-          {!showAll && mockProviders.length > VISIBLE_COUNT && (
+          {!showAll && filtered.length > VISIBLE_COUNT && (
             <div className="relative -mt-40 pt-40 pointer-events-none">
               <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent" />
               <div className="relative flex flex-col items-center pb-6 pointer-events-auto">
                 <p className="text-gray-700 font-medium mb-1">
-                  Sign in to view all {mockProviders.length} providers
+                  Sign in to view all {filtered.length} providers
                 </p>
                 <p className="text-sm text-gray-500 mb-4">
                   Create a free account to browse profiles, send messages, and

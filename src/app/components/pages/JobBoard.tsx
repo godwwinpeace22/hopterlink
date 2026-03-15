@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -12,18 +13,19 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import {
-  ArrowLeft,
   MapPin,
   DollarSign,
   Clock,
   Send,
   MessageSquare,
   SlidersHorizontal,
+  Maximize2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { PageHeader } from "../ui/page-header";
 import {
   Sheet,
   SheetContent,
@@ -35,10 +37,7 @@ import {
   useProviderGetJobs,
   type ProviderJob,
 } from "@/app/hooks/useProviderGetJobs";
-
-interface JobBoardProps {
-  embedded?: boolean;
-}
+import { useServiceCategories } from "@/lib/useServiceCategories";
 
 type Job = ProviderJob;
 
@@ -83,9 +82,10 @@ const getDateThreshold = (
   return Date.now() - days * 24 * 60 * 60 * 1000;
 };
 
-export function JobBoard({ embedded = false }: JobBoardProps) {
+export function JobBoard() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const { categorySlugsWithAll, slugToName } = useServiceCategories();
+  // const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<
     "all" | "last7" | "last30" | "last90"
@@ -107,7 +107,8 @@ export function JobBoard({ embedded = false }: JobBoardProps) {
     message: "",
   });
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showDetailsSheet, setShowDetailsSheet] = useState(false);
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
   const { jobs, isLoading, error, refresh } = useProviderGetJobs(user?.id);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -149,18 +150,10 @@ export function JobBoard({ embedded = false }: JobBoardProps) {
 
       await refresh();
 
-      await supabase.from("notifications").insert({
-        user_id: selectedJob.clientId,
-        type: "quote_received",
-        title: "New quote received",
-        message: `You received a new quote for ${selectedJob.title}.`,
-        related_id: selectedJob.id,
-      });
-
       setShowQuoteDialog(false);
       setQuoteData({ amount: "", timeline: "", message: "" });
-      alert(
-        "Quote submitted successfully! The client will review and may message you.",
+      toast.success(
+        "Quote submitted! The client will review and may message you.",
       );
     } catch (error) {
       const message =
@@ -231,25 +224,8 @@ export function JobBoard({ embedded = false }: JobBoardProps) {
   ]);
 
   const content = (
-    <div className="space-y-6">
-      {!embedded && (
-        <div className="flex items-center justify-between">
-          <div>
-            <button
-              onClick={() => navigate("/dashboard/provider")}
-              className="flex items-center gap-2 text-gray-600 hover:text-[#F7C876] transition-colors mb-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              Back to Dashboard
-            </button>
-            <h1 className="text-3xl font-bold">Available Jobs</h1>
-            <p className="text-gray-600">
-              Browse and bid on jobs in your service area
-            </p>
-          </div>
-        </div>
-      )}
-
+    <div className="space-y-6 pt-3">
+      <PageHeader title="Job Board" hideBack />
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
           Showing {filteredJobs.length} jobs
@@ -309,70 +285,20 @@ export function JobBoard({ embedded = false }: JobBoardProps) {
             <div>
               <Label className="text-sm">Category</Label>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  variant={filter === "all" ? "default" : "outline"}
-                  className={
-                    filter === "all" ? "bg-[#F7C876] hover:bg-[#EFA055]" : ""
-                  }
-                  onClick={() => setFilter("all")}
-                >
-                  All Jobs ({jobs.length})
-                </Button>
-                <Button
-                  variant={filter === "landscaping" ? "default" : "outline"}
-                  className={
-                    filter === "landscaping"
-                      ? "bg-[#F7C876] hover:bg-[#EFA055]"
-                      : ""
-                  }
-                  onClick={() => setFilter("landscaping")}
-                >
-                  Landscaping
-                </Button>
-                <Button
-                  variant={filter === "snow-clearing" ? "default" : "outline"}
-                  className={
-                    filter === "snow-clearing"
-                      ? "bg-[#F7C876] hover:bg-[#EFA055]"
-                      : ""
-                  }
-                  onClick={() => setFilter("snow-clearing")}
-                >
-                  Snow Clearing
-                </Button>
-                <Button
-                  variant={filter === "painting" ? "default" : "outline"}
-                  className={
-                    filter === "painting"
-                      ? "bg-[#F7C876] hover:bg-[#EFA055]"
-                      : ""
-                  }
-                  onClick={() => setFilter("painting")}
-                >
-                  Painting
-                </Button>
-                <Button
-                  variant={filter === "cleaning" ? "default" : "outline"}
-                  className={
-                    filter === "cleaning"
-                      ? "bg-[#F7C876] hover:bg-[#EFA055]"
-                      : ""
-                  }
-                  onClick={() => setFilter("cleaning")}
-                >
-                  Cleaning
-                </Button>
-                <Button
-                  variant={filter === "handyman" ? "default" : "outline"}
-                  className={
-                    filter === "handyman"
-                      ? "bg-[#F7C876] hover:bg-[#EFA055]"
-                      : ""
-                  }
-                  onClick={() => setFilter("handyman")}
-                >
-                  Handyman
-                </Button>
+                {categorySlugsWithAll.map((slug) => (
+                  <Button
+                    key={slug}
+                    variant={filter === slug ? "default" : "outline"}
+                    className={
+                      filter === slug ? "bg-[#F7C876] hover:bg-[#EFA055]" : ""
+                    }
+                    onClick={() => setFilter(slug)}
+                  >
+                    {slug === "all"
+                      ? `All Jobs (${jobs.length})`
+                      : (slugToName.get(slug) ?? slug)}
+                  </Button>
+                ))}
               </div>
             </div>
 
@@ -705,150 +631,168 @@ export function JobBoard({ embedded = false }: JobBoardProps) {
                     </DialogContent>
                   </Dialog>
 
-                  <Dialog
-                    open={showDetailsDialog && selectedJob?.id === job.id}
-                    onOpenChange={setShowDetailsDialog}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2"
+                    onClick={() => {
+                      setSelectedJob(job);
+                      setShowDetailsSheet(true);
+                    }}
                   >
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2"
-                        onClick={() => setSelectedJob(job)}
-                      >
-                        View Details
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>Job Details</DialogTitle>
-                      </DialogHeader>
-
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">
-                            {selectedJob?.title}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            Posted{" "}
-                            {formatDate(
-                              selectedJob?.postedAt ?? selectedJob?.postedDate,
-                            )}{" "}
-                            • {selectedJob?.clientName}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Badge className="bg-[#FDEFD6] text-[#F1A400] border-[#F7C876]">
-                            {selectedJob?.category}
-                          </Badge>
-                          {selectedJob?.urgency === "urgent" && (
-                            <Badge className="bg-red-100 text-red-600 border-red-300">
-                              🔥 Urgent
-                            </Badge>
-                          )}
-                          <span className="text-sm text-gray-600">
-                            Budget: ${selectedJob?.budget} (
-                            {selectedJob?.budgetType === "fixed"
-                              ? "Fixed"
-                              : "Per hour"}
-                            )
-                          </span>
-                        </div>
-
-                        <div className="text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            <span>
-                              {formatLocation(selectedJob?.location) ||
-                                "Location not provided"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-2">
-                            Description
-                          </h4>
-                          <p className="text-gray-700 whitespace-pre-line">
-                            {selectedJob?.description}
-                          </p>
-                        </div>
-
-                        {selectedJob?.providerQuote && (
-                          <div className="rounded-lg border border-[#F7C876]/40 bg-[#FDEFD6]/60 p-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-gray-900">
-                                Your Quote
-                              </h4>
-                              {selectedJob.providerQuote.status && (
-                                <Badge className="bg-white text-[#F1A400] border-[#F7C876]">
-                                  {selectedJob.providerQuote.status}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="mt-3 grid gap-2 text-sm text-gray-700">
-                              <div>
-                                <span className="font-medium">Amount:</span>{" "}
-                                {selectedJob.providerQuote.amount != null
-                                  ? `$${selectedJob.providerQuote.amount}`
-                                  : "Not specified"}
-                              </div>
-                              <div>
-                                <span className="font-medium">Timeline:</span>{" "}
-                                {selectedJob.providerQuote.estimatedDuration ||
-                                  "Not specified"}
-                              </div>
-                              {selectedJob.providerQuote.createdAt && (
-                                <div>
-                                  <span className="font-medium">
-                                    Submitted:
-                                  </span>{" "}
-                                  {formatDate(
-                                    selectedJob.providerQuote.createdAt,
-                                  )}
-                                </div>
-                              )}
-                              {selectedJob.providerQuote.message && (
-                                <div>
-                                  <span className="font-medium">Message:</span>
-                                  <p className="mt-1 text-gray-700 whitespace-pre-line">
-                                    {selectedJob.providerQuote.message}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {selectedJob?.photos &&
-                          selectedJob.photos.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-2">
-                                Photos
-                              </h4>
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {selectedJob.photos.map((photo, index) => (
-                                  <img
-                                    key={`${selectedJob.id}-photo-${index}`}
-                                    src={photo}
-                                    alt={`${selectedJob.title} photo ${index + 1}`}
-                                    className="h-28 w-full rounded-lg object-cover"
-                                    loading="lazy"
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                    View Details
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Job Details Sheet */}
+      <Sheet open={showDetailsSheet} onOpenChange={setShowDetailsSheet}>
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col sm:max-w-2xl overflow-y-auto"
+        >
+          <SheetHeader className="border-b pb-4">
+            <SheetTitle className="text-xl leading-tight">
+              {selectedJob?.title}
+            </SheetTitle>
+            <p className="text-sm text-gray-500">
+              Posted{" "}
+              {formatDate(selectedJob?.postedAt ?? selectedJob?.postedDate)}
+              {selectedJob?.clientName ? ` • ${selectedJob.clientName}` : ""}
+            </p>
+          </SheetHeader>
+
+          <div className="flex-1 space-y-5 overflow-y-auto py-4 px-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge className="bg-[#FDEFD6] text-[#F1A400] border-[#F7C876]">
+                {selectedJob?.category}
+              </Badge>
+              {selectedJob?.urgency === "urgent" && (
+                <Badge className="bg-red-100 text-red-600 border-red-300">
+                  🔥 Urgent
+                </Badge>
+              )}
+              <span className="text-sm text-gray-600">
+                Budget: ${selectedJob?.budget} (
+                {selectedJob?.budgetType === "fixed" ? "Fixed" : "Per hour"})
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <MapPin className="h-4 w-4 shrink-0" />
+              {formatLocation(selectedJob?.location) || "Location not provided"}
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+              <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed">
+                {selectedJob?.description}
+              </p>
+            </div>
+
+            {selectedJob?.photos && selectedJob.photos.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Photos</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {selectedJob.photos.map((photo, index) => (
+                    <button
+                      key={`sheet-photo-${selectedJob.id}-${index}`}
+                      type="button"
+                      className="group relative overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F7C876]"
+                      onClick={() => setExpandedPhoto(photo)}
+                    >
+                      <img
+                        src={photo}
+                        alt={`${selectedJob.title} photo ${index + 1}`}
+                        className="h-36 w-full object-cover transition-opacity group-hover:opacity-90"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                        <Maximize2 className="h-5 w-5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedJob?.providerQuote && (
+              <div className="rounded-lg border border-[#F7C876]/40 bg-[#FDEFD6]/60 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="font-semibold text-gray-900">Your Quote</h4>
+                  {selectedJob.providerQuote.status && (
+                    <Badge className="bg-white text-[#F1A400] border-[#F7C876]">
+                      {selectedJob.providerQuote.status}
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid gap-2 text-sm text-gray-700">
+                  <div>
+                    <span className="font-medium">Amount:</span>{" "}
+                    {selectedJob.providerQuote.amount != null
+                      ? `$${selectedJob.providerQuote.amount}`
+                      : "Not specified"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Timeline:</span>{" "}
+                    {selectedJob.providerQuote.estimatedDuration ||
+                      "Not specified"}
+                  </div>
+                  {selectedJob.providerQuote.createdAt && (
+                    <div>
+                      <span className="font-medium">Submitted:</span>{" "}
+                      {formatDate(selectedJob.providerQuote.createdAt)}
+                    </div>
+                  )}
+                  {selectedJob.providerQuote.message && (
+                    <div>
+                      <span className="font-medium">Message:</span>
+                      <p className="mt-1 whitespace-pre-line">
+                        {selectedJob.providerQuote.message}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {!selectedJob?.hasQuoted && (
+            <div className=" pt-4 px-6 pb-6">
+              <Button
+                className="w-full bg-[#F7C876] hover:bg-[#EFA055]"
+                onClick={() => {
+                  setShowDetailsSheet(false);
+                  setShowQuoteDialog(true);
+                }}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Submit Quote
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Photo lightbox */}
+      <Dialog
+        open={expandedPhoto !== null}
+        onOpenChange={() => setExpandedPhoto(null)}
+      >
+        <DialogContent className="max-w-5xl border-0 bg-black/95 p-2">
+          {expandedPhoto && (
+            <img
+              src={expandedPhoto}
+              alt="Expanded photo"
+              className="max-h-[85vh] w-full rounded object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {filteredJobs.length === 0 && (
         <Card>
@@ -860,13 +804,5 @@ export function JobBoard({ embedded = false }: JobBoardProps) {
     </div>
   );
 
-  if (embedded) {
-    return content;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">{content}</div>
-    </div>
-  );
+  return content;
 }

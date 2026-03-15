@@ -1,11 +1,56 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "@/lib/router";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Mail, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export function EmailVerification() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const [isChecking, setIsChecking] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const email = searchParams.get("email");
+
+  const handleContinue = async () => {
+    if (!user) {
+      navigate("/signin");
+      return;
+    }
+
+    try {
+      setIsChecking(true);
+      setStatusMessage(null);
+
+      const {
+        data: { user: freshUser },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!freshUser?.email_confirmed_at) {
+        setStatusMessage(
+          "Your email is not verified yet. Open the link in your inbox, then try again.",
+        );
+        return;
+      }
+
+      navigate("/dashboard");
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to confirm verification status.",
+      );
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -31,16 +76,32 @@ export function EmailVerification() {
               )}
               <p className="text-sm text-gray-500 text-center">
                 Click the link in the email to verify your account, then come
-                back and sign in.
+                back here to continue.
               </p>
             </div>
 
             <div className="space-y-3">
-              <Link to="/signin" className="block">
-                <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6">
-                  Go to Sign In
+              {user ? (
+                <Button
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6"
+                  onClick={handleContinue}
+                  disabled={isChecking}
+                >
+                  {isChecking ? "Checking..." : "Continue"}
                 </Button>
-              </Link>
+              ) : (
+                <Link to="/signin" className="block">
+                  <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6">
+                    Go to Sign In
+                  </Button>
+                </Link>
+              )}
+
+              {statusMessage ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  {statusMessage}
+                </p>
+              ) : null}
 
               <div className="text-center">
                 <Link

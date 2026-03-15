@@ -1,18 +1,20 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Textarea } from "../ui/textarea";
-import { ArrowLeft } from "lucide-react";
+// import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { SignupTabs } from "./SignupTabs";
+import { useServiceCategories } from "@/lib/useServiceCategories";
 
 export function ProviderSignup() {
   const navigate = useNavigate();
   const { signUp } = useAuth();
+  const { categories } = useServiceCategories();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -39,16 +41,21 @@ export function ProviderSignup() {
 
     setIsSubmitting(true);
     try {
-      const { userId, hasSession } = await signUp({
+      const experienceYears = Number.parseInt(formData.experience, 10);
+      const { userId, hasSession, emailVerified } = await signUp({
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
         phone: formData.phone,
         role: "provider",
+        businessName: formData.fullName,
+        category: formData.serviceCategory,
+        bio: formData.bio,
+        experienceYears: Number.isNaN(experienceYears) ? 0 : experienceYears,
       });
 
-      if (userId && hasSession) {
-        await supabase.from("profiles").upsert(
+      if (userId && hasSession && emailVerified) {
+        const { error: profileError } = await supabase.from("profiles").upsert(
           {
             id: userId,
             role: "provider",
@@ -59,20 +66,29 @@ export function ProviderSignup() {
           { onConflict: "id" },
         );
 
-        const experienceYears = Number.parseInt(formData.experience, 10);
-        await supabase.from("provider_profiles").upsert(
-          {
-            user_id: userId,
-            business_name: formData.fullName,
-            bio: formData.bio,
-            services: [formData.serviceCategory],
-            experience_years: Number.isNaN(experienceYears)
-              ? 0
-              : experienceYears,
-            verification_status: "not_started",
-          },
-          { onConflict: "user_id" },
-        );
+        if (profileError) {
+          throw profileError;
+        }
+
+        const { error: providerProfileError } = await supabase
+          .from("provider_profiles")
+          .upsert(
+            {
+              user_id: userId,
+              business_name: formData.fullName,
+              bio: formData.bio,
+              services: [formData.serviceCategory],
+              experience_years: Number.isNaN(experienceYears)
+                ? 0
+                : experienceYears,
+              verification_status: "not_started",
+            },
+            { onConflict: "user_id" },
+          );
+
+        if (providerProfileError) {
+          throw providerProfileError;
+        }
 
         navigate("/provider/onboarding");
       } else {
@@ -182,15 +198,11 @@ export function ProviderSignup() {
                   required
                 >
                   <option value="">Select a category</option>
-                  <option value="snow-clearing">Snow Clearing</option>
-                  <option value="landscaping">Landscaping</option>
-                  <option value="cleaning">Cleaning Services</option>
-                  <option value="handyman">Handyman</option>
-                  <option value="painting">Painting</option>
-                  <option value="auto">Auto Services</option>
-                  <option value="childcare">Childcare</option>
-                  <option value="tutoring">Tutoring</option>
-                  <option value="other">Other</option>
+                  {categories.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

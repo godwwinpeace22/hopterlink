@@ -2,21 +2,20 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
-import { ArrowLeft, Upload, MapPin, DollarSign, Calendar } from "lucide-react";
+import { Upload, MapPin, DollarSign, Calendar } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { PageHeader } from "../ui/page-header";
+import { useServiceCategories } from "@/lib/useServiceCategories";
 
-interface PostJobProps {
-  embedded?: boolean;
-}
-
-export function PostJob({ embedded = false }: PostJobProps) {
+export function PostJob() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { categories } = useServiceCategories();
   const [jobData, setJobData] = useState({
     title: "",
     category: "",
@@ -109,31 +108,12 @@ export function PostJob({ embedded = false }: PostJobProps) {
     }
   };
 
-  const content = (
-    <div className={embedded ? "" : "max-w-4xl mx-auto"}>
-      {!embedded && (
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => navigate("/dashboard/client")}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#F7C876] transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Back to Dashboard
-          </button>
-        </div>
-      )}
-
+  return (
+    <div className="max-w-3xl space-y-6 pt-6">
+      <PageHeader title="Post a Job" />
       <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl">Post a New Job</CardTitle>
-          <p className="text-gray-600">
-            Describe your service need and receive quotes from qualified
-            providers
-          </p>
-        </CardHeader>
-
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 pt-8">
             {errorMessage && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {errorMessage}
@@ -141,7 +121,7 @@ export function PostJob({ embedded = false }: PostJobProps) {
             )}
             {/* Job Title */}
             <div>
-              <Label htmlFor="title">
+              <Label htmlFor="title" className="mb-2">
                 Job Title <span className="text-red-600">*</span>
               </Label>
               <Input
@@ -157,7 +137,7 @@ export function PostJob({ embedded = false }: PostJobProps) {
 
             {/* Service Category */}
             <div>
-              <Label htmlFor="category">
+              <Label htmlFor="category" className="mb-2">
                 Service Category <span className="text-red-600">*</span>
               </Label>
               <select
@@ -170,22 +150,17 @@ export function PostJob({ embedded = false }: PostJobProps) {
                 required
               >
                 <option value="">Select a category</option>
-                <option value="snow-clearing">Snow Clearing</option>
-                <option value="landscaping">Landscaping</option>
-                <option value="cleaning">Cleaning Services</option>
-                <option value="handyman">Handyman</option>
-                <option value="painting">Painting</option>
-                <option value="auto">Auto Services</option>
-                <option value="childcare">Childcare</option>
-                <option value="tutoring">Tutoring</option>
-                <option value="moving">Moving Help</option>
-                <option value="other">Other</option>
+                {categories.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Job Description */}
             <div>
-              <Label htmlFor="description">
+              <Label htmlFor="description" className="mb-2">
                 Job Description <span className="text-red-600">*</span>
               </Label>
               <Textarea
@@ -206,7 +181,9 @@ export function PostJob({ embedded = false }: PostJobProps) {
             {/* Budget */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="budgetType">Budget Type</Label>
+                <Label htmlFor="budgetType" className="mb-2">
+                  Budget Type
+                </Label>
                 <select
                   id="budgetType"
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
@@ -223,7 +200,7 @@ export function PostJob({ embedded = false }: PostJobProps) {
                 </select>
               </div>
               <div>
-                <Label htmlFor="budget">
+                <Label htmlFor="budget" className="mb-2">
                   Estimated Budget <span className="text-red-600">*</span>
                 </Label>
                 <div className="relative">
@@ -248,7 +225,7 @@ export function PostJob({ embedded = false }: PostJobProps) {
 
             {/* Location */}
             <div>
-              <Label htmlFor="location">
+              <Label htmlFor="location" className="mb-2">
                 Job Location <span className="text-red-600">*</span>
               </Label>
               <div className="relative">
@@ -269,7 +246,9 @@ export function PostJob({ embedded = false }: PostJobProps) {
             {/* Urgency & Date */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="urgency">Urgency Level</Label>
+                <Label htmlFor="urgency" className="mb-2">
+                  Urgency Level
+                </Label>
                 <select
                   id="urgency"
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
@@ -286,7 +265,9 @@ export function PostJob({ embedded = false }: PostJobProps) {
                 </select>
               </div>
               <div>
-                <Label htmlFor="preferredDate">Preferred Start Date</Label>
+                <Label htmlFor="preferredDate" className="mb-2">
+                  Preferred Start Date
+                </Label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -307,7 +288,7 @@ export function PostJob({ embedded = false }: PostJobProps) {
 
             {/* Photo Upload */}
             <div>
-              <Label>Photos (Optional)</Label>
+              <Label className="mb-2">Photos (Optional)</Label>
               <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-[#F7C876] transition-colors">
                 <div className="text-center">
                   <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -346,7 +327,7 @@ export function PostJob({ embedded = false }: PostJobProps) {
             </div>
 
             {/* Info Box */}
-            <div className="bg-[#FDEFD6] border border-[#F7C876] rounded-lg p-4">
+            {/* <div className="bg-[#FDEFD6] border border-[#F7C876] rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <div className="h-6 w-6 bg-[#F7C876] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-white text-sm font-bold">!</span>
@@ -364,7 +345,7 @@ export function PostJob({ embedded = false }: PostJobProps) {
                   </ul>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Submit Button */}
             <div className="flex gap-4">
@@ -388,10 +369,4 @@ export function PostJob({ embedded = false }: PostJobProps) {
       </Card>
     </div>
   );
-
-  if (embedded) {
-    return content;
-  }
-
-  return <div className="min-h-screen bg-gray-50 py-8 px-4">{content}</div>;
 }

@@ -1,45 +1,33 @@
-import { Link } from "react-router-dom";
-import {
-  Facebook,
-  Instagram,
-  Twitter,
-  Youtube,
-  Linkedin,
-  MessageCircle,
-} from "lucide-react";
+import { Link } from "@/lib/router";
+import { Facebook, Instagram, Twitter } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 const productLinks = [
   { label: "Features", to: "/services" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "Case Studies", to: "#" },
-  { label: "Reviews", to: "#" },
-  { label: "Updates", to: "#" },
+  { label: "How It Works", to: "/how-it-works" },
+  { label: "Providers", to: "/providers" },
 ];
 
 const supportLinks = [
-  { label: "Getting Started", to: "#" },
-  { label: "Help Center", to: "#" },
-  { label: "Server Status", to: "#" },
-  { label: "Report a Bug", to: "#" },
-  { label: "Chat Support", to: "#" },
+  { label: "Help Center", to: "/help" },
+  { label: "Terms and Conditions", to: "/terms" },
+  { label: "Privacy Policy", to: "/privacy" },
 ];
 
 const providerLinks = [
   { label: "About", to: "/about" },
-  { label: "Contact Us", to: "#" },
-  { label: "Careers", to: "#" },
   { label: "FAQ's", to: "/how-it-works" },
-  { label: "Blog", to: "#" },
+  { label: "Become a Provider", to: "/sign-up" },
 ];
 
 const socialLinks = [
-  { icon: Facebook, label: "Facebook", to: "#" },
-  { icon: Instagram, label: "Instagram", to: "#" },
-  { icon: Twitter, label: "Twitter", to: "#" },
-  { icon: MessageCircle, label: "WhatsApp", to: "#" },
-  { icon: Youtube, label: "YouTube", to: "#" },
-  { icon: Linkedin, label: "LinkedIn", to: "#" },
+  { icon: Facebook, label: "Facebook", to: "https://facebook.com/hopterlink" },
+  {
+    icon: Instagram,
+    label: "Instagram",
+    to: "https://instagram.com/hopterlink",
+  },
+  { icon: Twitter, label: "Twitter", to: "https://x.com/hopterlink" },
 ];
 
 export function Footer() {
@@ -103,25 +91,13 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Subscribe & App */}
+          {/* App Download */}
           <div className="col-span-2 md:col-span-1 lg:col-span-2">
-            <div className="bg-gray-800 rounded-xl p-5 mb-5">
-              <h5 className="text-white font-semibold mb-3">
-                Sign Up For Subscription
-              </h5>
-              <div className="mb-3">
-                <input
-                  type="email"
-                  placeholder="Enter Email Address"
-                  className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white placeholder:text-gray-400 outline-none focus:border-amber-500 transition-colors"
-                />
-              </div>
-              <button className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all">
-                Subscribe
-              </button>
-            </div>
             <div>
-              <p className="text-sm text-gray-400 mb-2">Download Our App</p>
+              <p className="text-white font-semibold mb-3">Download Our App</p>
+              <p className="text-sm text-gray-400 mb-4">
+                Get the Hopterlink mobile app for the best experience.
+              </p>
               <div className="flex items-center gap-3 flex-wrap">
                 <img
                   src="/img/icons/app-store.svg"
@@ -129,7 +105,7 @@ export function Footer() {
                   className="h-10 cursor-pointer hover:opacity-80 transition-opacity"
                 />
                 <img
-                  src="/img/icons/goolge-play.svg"
+                  src="/img/icons/google-play.svg"
                   alt="Google Play"
                   className="h-10 cursor-pointer hover:opacity-80 transition-opacity"
                 />
@@ -145,6 +121,8 @@ export function Footer() {
               <a
                 key={social.label}
                 href={social.to}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="h-9 w-9 rounded-full bg-gray-800 flex items-center justify-center hover:bg-amber-500 transition-colors"
                 aria-label={social.label}
               >

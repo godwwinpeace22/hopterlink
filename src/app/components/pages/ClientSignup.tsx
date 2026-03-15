@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -36,16 +36,17 @@ export function ClientSignup() {
 
     setIsSubmitting(true);
     try {
-      const { userId, hasSession } = await signUp({
+      const { userId, hasSession, emailVerified } = await signUp({
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
         phone: formData.phone,
         role: "client",
+        address: formData.address,
       });
 
-      if (userId && hasSession) {
-        await supabase.from("profiles").upsert(
+      if (userId && hasSession && emailVerified) {
+        const { error: profileError } = await supabase.from("profiles").upsert(
           {
             id: userId,
             role: "client",
@@ -57,21 +58,37 @@ export function ClientSignup() {
           { onConflict: "id" },
         );
 
-        await supabase.from("client_profiles").upsert(
-          {
-            user_id: userId,
-          },
-          { onConflict: "user_id" },
-        );
+        if (profileError) {
+          throw profileError;
+        }
+
+        const { error: clientProfileError } = await supabase
+          .from("client_profiles")
+          .upsert(
+            {
+              user_id: userId,
+            },
+            { onConflict: "user_id" },
+          );
+
+        if (clientProfileError) {
+          throw clientProfileError;
+        }
 
         const referralCode = `FH-${userId.slice(0, 8)}`;
-        await supabase.from("client_rewards").upsert(
-          {
-            user_id: userId,
-            referral_code: referralCode,
-          },
-          { onConflict: "user_id" },
-        );
+        const { error: clientRewardsError } = await supabase
+          .from("client_rewards")
+          .upsert(
+            {
+              user_id: userId,
+              referral_code: referralCode,
+            },
+            { onConflict: "user_id" },
+          );
+
+        if (clientRewardsError) {
+          throw clientRewardsError;
+        }
 
         navigate("/dashboard/client");
       } else {

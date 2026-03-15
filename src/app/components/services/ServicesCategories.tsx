@@ -1,7 +1,7 @@
 "use client";
 
 import { Star, ChevronRight, CheckCircle2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router";
 import { toast } from "sonner";
 import { services as landingServices } from "../landing/ServiceCategories";
 import { useAuth } from "@/contexts/AuthContext";

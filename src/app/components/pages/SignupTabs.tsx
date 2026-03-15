@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "@/lib/router";
 import { User, Briefcase } from "lucide-react";
 
 const tabs = [

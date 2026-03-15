@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "@/lib/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { paths } from "./paths";
 
@@ -6,7 +6,8 @@ type RouteAccess =
   | "authenticated"
   | "client"
   | "provider"
-  | "provider-membership";
+  | "provider-membership"
+  | "admin";
 
 function LoadingState({ message }: { message: string }) {
   return (
@@ -43,6 +44,25 @@ export function RequireAuth({
     if (!approvedRoles.includes("client") || activeRole !== "client") {
       return <Navigate to={paths.dashboard.root} replace />;
     }
+
+    if (!user.email_confirmed_at) {
+      const params = new URLSearchParams();
+      if (user.email) {
+        params.set("email", user.email);
+      }
+
+      const target =
+        params.size > 0
+          ? `${paths.auth.emailVerification}?${params.toString()}`
+          : paths.auth.emailVerification;
+      return <Navigate to={target} replace />;
+    }
+  }
+
+  if (access === "admin") {
+    if (!approvedRoles.includes("admin") || activeRole !== "admin") {
+      return <Navigate to={paths.dashboard.root} replace />;
+    }
   }
 
   if (access === "provider-membership") {
@@ -52,17 +72,34 @@ export function RequireAuth({
     if (!hasProviderMembership && !approvedRoles.includes("provider")) {
       return <Navigate to={paths.dashboard.root} replace />;
     }
+
+    if (hasProviderMembership && !user.email_confirmed_at) {
+      const params = new URLSearchParams();
+      if (user.email) {
+        params.set("email", user.email);
+      }
+
+      const target =
+        params.size > 0
+          ? `${paths.auth.emailVerification}?${params.toString()}`
+          : paths.auth.emailVerification;
+      return <Navigate to={target} replace />;
+    }
   }
 
   return <>{children}</>;
 }
 
 export function DashboardRouter() {
-  const { memberships, activeRole, approvedRoles } = useAuth();
+  const { memberships, activeRole, approvedRoles, user } = useAuth();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const section = params.get("section");
   const jobId = params.get("jobId");
+
+  if (activeRole === "admin") {
+    return <Navigate to={paths.dashboard.admin.root} replace />;
+  }
 
   if (activeRole === "provider") {
     if (section) {
@@ -79,6 +116,19 @@ export function DashboardRouter() {
   }
 
   if (activeRole === "client") {
+    if (!user?.email_confirmed_at) {
+      const params = new URLSearchParams();
+      if (user?.email) {
+        params.set("email", user.email);
+      }
+
+      const target =
+        params.size > 0
+          ? `${paths.auth.emailVerification}?${params.toString()}`
+          : paths.auth.emailVerification;
+      return <Navigate to={target} replace />;
+    }
+
     if (section) {
       if (section === "job-details" && jobId) {
         return <Navigate to={paths.dashboard.client.job(jobId)} replace />;
@@ -100,6 +150,19 @@ export function DashboardRouter() {
   }
 
   if (approvedRoles.includes("client")) {
+    if (!user?.email_confirmed_at) {
+      const params = new URLSearchParams();
+      if (user?.email) {
+        params.set("email", user.email);
+      }
+
+      const target =
+        params.size > 0
+          ? `${paths.auth.emailVerification}?${params.toString()}`
+          : paths.auth.emailVerification;
+      return <Navigate to={target} replace />;
+    }
+
     return <Navigate to={paths.dashboard.client.root} replace />;
   }
 
@@ -107,6 +170,19 @@ export function DashboardRouter() {
     (membership) => membership.role === "provider",
   );
   if (providerMembership) {
+    if (!user?.email_confirmed_at) {
+      const params = new URLSearchParams();
+      if (user.email) {
+        params.set("email", user.email);
+      }
+
+      const target =
+        params.size > 0
+          ? `${paths.auth.emailVerification}?${params.toString()}`
+          : paths.auth.emailVerification;
+      return <Navigate to={target} replace />;
+    }
+
     return <Navigate to={paths.provider.onboarding} replace />;
   }
 

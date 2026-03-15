@@ -14,7 +14,48 @@ export type ClientDashboardSection =
   | "notifications"
   | "profile";
 
-export type ClientDashboardContextValue = any;
+export type BookingItem = {
+  id: string;
+  providerId: string | null;
+  provider: string;
+  providerRating: number;
+  service: string;
+  date: string;
+  time: string;
+  status: "upcoming" | "in-progress" | "completed" | "cancelled";
+  paymentStatus?: string | null;
+  escrowStatus?: string | null;
+  price: number;
+  address: string;
+  hasReview?: boolean;
+};
+
+export type MessageItem = {
+  id: string;
+  provider: string;
+  message: string;
+  time: string;
+  unread: boolean;
+};
+
+export type ClientData = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  avatar: string;
+  memberSince: string;
+};
+
+export type ClientDashboardContextValue = {
+  navigateToSection: (
+    section: ClientDashboardSection,
+    replace?: boolean,
+    jobIdValue?: string | null,
+  ) => void;
+  unreadMessages: number;
+  clientData: ClientData;
+};
 
 const ClientDashboardContext =
   createContext<ClientDashboardContextValue | null>(null);

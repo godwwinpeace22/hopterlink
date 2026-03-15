@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
 import {
@@ -14,7 +14,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/components/ui/card";
-import { Star } from "lucide-react";
+import { PageHeader } from "@/app/components/ui/page-header";
+import { Briefcase, Calendar, MapPin, Star } from "lucide-react";
 
 const getInitials = (name: string) => {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -65,6 +66,30 @@ export const PublicProfile = () => {
         .select("rating, total_reviews, jobs_completed, bio")
         .eq("user_id", userId ?? "")
         .single(),
+    { enabled: Boolean(userId) && role === "provider" },
+  );
+
+  const { data: bookingsResult } = useSupabaseQuery(
+    ["public_profile_bookings", userId],
+    () =>
+      supabase
+        .from("bookings")
+        .select(
+          `
+            id,
+            scheduled_date,
+            status,
+            service_type,
+            location,
+            client:profiles!bookings_client_id_fkey (
+              id,
+              full_name
+            )
+          `,
+        )
+        .eq("provider_id", userId ?? "")
+        .order("scheduled_date", { ascending: false })
+        .limit(5),
     { enabled: Boolean(userId) && role === "provider" },
   );
 
@@ -125,7 +150,42 @@ export const PublicProfile = () => {
   }, [providerProfileResult, reviewsResult]);
 
   const jobs = useMemo(() => {
-    if (role !== "client") return [];
+    if (role === "provider") {
+      const bookedJobs = (bookingsResult?.data ?? []).map((booking) => {
+        const client = Array.isArray(booking.client)
+          ? booking.client[0]
+          : booking.client;
+
+        return {
+          id: booking.id,
+          title: booking.service_type ?? "Service",
+          subtitle: client?.full_name ?? "Client",
+          status: booking.status ?? "",
+          date: formatDate(booking.scheduled_date),
+          location: getLocationLabel(booking.location),
+        };
+      });
+
+      if (bookedJobs.length > 0) {
+        return bookedJobs;
+      }
+
+      return (reviewsResult?.data ?? []).map((review) => {
+        const reviewer = Array.isArray(review.reviewer)
+          ? review.reviewer[0]
+          : review.reviewer;
+
+        return {
+          id: review.id,
+          title: "Completed service",
+          subtitle: reviewer?.full_name ?? "Client",
+          status: "completed",
+          date: formatDate(review.created_at),
+          location: "Service area",
+        };
+      });
+    }
+
     return (jobsResult?.data ?? []).map((job) => ({
       id: job.id,
       title: job.title ?? "Job",
@@ -134,7 +194,7 @@ export const PublicProfile = () => {
       date: formatDate(job.created_at),
       location: getLocationLabel(job.location),
     }));
-  }, [role, jobsResult]);
+  }, [role, bookingsResult, jobsResult, reviewsResult]);
 
   const reviews = useMemo(() => {
     return (reviewsResult?.data ?? []).map((review) => {
@@ -152,129 +212,187 @@ export const PublicProfile = () => {
   }, [reviewsResult]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 px-4 py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                {avatarUrl && <AvatarImage src={avatarUrl} />}
-                <AvatarFallback className="bg-blue-600 text-white text-lg">
-                  {getInitials(displayName || "User")}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
+    <div className="space-y-6 py-6 max-w-5xl">
+      <PageHeader title={displayName || "Profile"} backTo={-1} />
+
+      {/* Hero card */}
+      <Card className="overflow-hidden border border-[#F7C876]/30 shadow-sm">
+        <div className="bg-gradient-to-br from-[#FEF3DB] to-white px-6 py-6 border-b border-[#F7C876]/30">
+          <div className="flex flex-wrap items-center gap-5">
+            <Avatar className="h-20 w-20 ring-4 ring-white shadow-md shrink-0">
+              {avatarUrl && <AvatarImage src={avatarUrl} />}
+              <AvatarFallback className="bg-[#F7C876] text-white text-2xl font-bold">
+                {getInitials(displayName || "User")}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h2 className="text-2xl font-bold text-gray-900">
                   {displayName || "Profile"}
                 </h2>
-                <p className="text-sm text-gray-600">
-                  {role === "provider" ? "Provider" : "Client"}
-                  {memberSince ? ` • Member since ${memberSince}` : ""}
-                </p>
+                <Badge
+                  className={
+                    role === "provider"
+                      ? "bg-[#F7C876]/30 text-[#C17A00] border-[#F7C876]/50"
+                      : "bg-blue-50 text-blue-700 border-blue-100"
+                  }
+                >
+                  {role === "provider" ? "Service Provider" : "Client"}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                 {location && (
-                  <p className="text-sm text-gray-500">{location}</p>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {location}
+                  </span>
+                )}
+                {memberSince && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Member since {memberSince}
+                  </span>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-semibold text-gray-900">
-                  {rating || "—"}
-                </span>
+            {rating > 0 && (
+              <div className="flex flex-col items-center gap-0.5 rounded-xl bg-white border border-[#F7C876]/40 px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-1">
+                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xl font-bold text-gray-900">
+                    {rating}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-400">Rating</span>
               </div>
-              <Badge className="bg-blue-50 text-blue-700 border-blue-100">
-                Rating
-              </Badge>
-            </div>
+            )}
           </div>
+        </div>
 
-          {isProfileLoading && (
-            <p className="text-sm text-gray-600">Loading profile...</p>
-          )}
+        {isProfileLoading && (
+          <CardContent className="py-4">
+            <p className="text-sm text-gray-500">Loading profile...</p>
+          </CardContent>
+        )}
 
-          {role === "provider" && (
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                <p className="text-sm text-gray-500">Completed Jobs</p>
-                <p className="font-medium text-gray-900">
-                  {providerProfileResult?.data?.jobs_completed ?? 0}
-                </p>
+        {role === "provider" && (
+          <CardContent className="py-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex items-center gap-3 rounded-lg bg-gray-50 px-4 py-3">
+                <Briefcase className="h-5 w-5 text-[#C17A00] shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                    Jobs Done
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    {providerProfileResult?.data?.jobs_completed ?? 0}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                <p className="text-sm text-gray-500">Total Reviews</p>
-                <p className="font-medium text-gray-900">
-                  {providerProfileResult?.data?.total_reviews ?? 0}
-                </p>
+              <div className="flex items-center gap-3 rounded-lg bg-gray-50 px-4 py-3">
+                <Star className="h-5 w-5 text-[#C17A00] shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                    Reviews
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    {providerProfileResult?.data?.total_reviews ?? 0}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                <p className="text-sm text-gray-500">Bio</p>
-                <p className="text-sm text-gray-700">
-                  {providerProfileResult?.data?.bio ?? "—"}
-                </p>
-              </div>
+              {providerProfileResult?.data?.bio && (
+                <div className="col-span-2 sm:col-span-3 rounded-lg bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                    About
+                  </p>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {providerProfileResult.data.bio}
+                  </p>
+                </div>
+              )}
             </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Recent Jobs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Recent Jobs</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {jobs.length === 0 ? (
+            <p className="text-sm text-gray-500">No jobs found.</p>
+          ) : (
+            jobs.map((job) => (
+              <div
+                key={job.id}
+                className="flex flex-col gap-1 rounded-lg border border-gray-100 hover:border-[#F7C876]/60 transition-colors p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    {job.title}
+                  </h3>
+                  <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-xs">
+                    {job.status?.replace("_", " ")}
+                  </Badge>
+                </div>
+                {job.subtitle && (
+                  <p className="text-sm text-gray-500">{job.subtitle}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 mt-0.5">
+                  {job.date && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {job.date}
+                    </span>
+                  )}
+                  {job.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {job.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>
 
-      {role === "client" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Jobs</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {jobs.length === 0 ? (
-              <p className="text-sm text-gray-500">No jobs found.</p>
-            ) : (
-              jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="flex flex-col gap-1 rounded-lg border border-gray-100 p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-semibold text-gray-900">{job.title}</h3>
-                    <Badge className="bg-gray-100 text-gray-700 border-gray-200">
-                      {job.status?.replace("_", " ")}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-600">{job.subtitle}</p>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                    <span>{job.date}</span>
-                    {job.location && <span>{job.location}</span>}
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      )}
-
+      {/* Reviews */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Reviews</CardTitle>
+          <CardTitle className="text-base">Reviews</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {reviews.length === 0 ? (
             <p className="text-sm text-gray-500">No reviews yet.</p>
           ) : (
             reviews.map((review) => (
               <div
                 key={review.id}
-                className="rounded-lg border border-gray-100 p-4"
+                className="rounded-lg border border-gray-100 hover:border-[#F7C876]/60 transition-colors p-4"
               >
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-gray-900">{review.name}</p>
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    {review.rating}
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-medium text-gray-900 text-sm">
+                    {review.name}
+                  </p>
+                  <div className="flex items-center gap-1 text-sm">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold text-gray-700">
+                      {review.rating}
+                    </span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600">{review.comment}</p>
-                <p className="text-xs text-gray-400">{review.date}</p>
+                {review.comment && (
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {review.comment}
+                  </p>
+                )}
+                {review.date && (
+                  <p className="text-xs text-gray-400 mt-1.5">{review.date}</p>
+                )}
               </div>
             ))
           )}

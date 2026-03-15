@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
-import { ArrowLeft, MessageSquare, Send, ChevronLeft } from "lucide-react";
+import { MessageSquare, Send, ChevronLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface MessagesProps {
-  embedded?: boolean;
-}
 
 type MessageRecord = {
   id: string;
@@ -69,9 +65,8 @@ const formatMessageTime = (value?: string | null) => {
 const getFirst = <T,>(value: T | T[] | null | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
-export function Messages({ embedded = false }: MessagesProps) {
-  const { user, profile, activeRole } = useAuth();
-  const navigate = useNavigate();
+export function Messages() {
+  const { user, profile } = useAuth();
   const location = useLocation();
   const navigationState =
     (location.state as {
@@ -528,14 +523,6 @@ export function Messages({ embedded = false }: MessagesProps) {
       },
     ]);
 
-    await supabase.from("notifications").insert({
-      user_id: selectedConversation.otherUserId,
-      type: "message_received",
-      title: "New message received",
-      message: trimmed.length > 120 ? `${trimmed.slice(0, 120)}...` : trimmed,
-      related_id: data.id,
-    });
-
     setDraft("");
   };
 
@@ -553,281 +540,238 @@ export function Messages({ embedded = false }: MessagesProps) {
     setShowThreadOnMobile(true);
   };
 
-  const handleBack = () => {
-    if (activeRole === "provider") {
-      navigate("/dashboard/provider");
-      return;
-    }
-    navigate("/dashboard/client");
-  };
-
   const content = (
     <>
-      {!embedded && (
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <button
-              onClick={handleBack}
-              className="mb-2 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              Back to Dashboard
-            </button>
-            <h1 className="text-3xl font-bold text-foreground">Messages</h1>
-            <p className="text-muted-foreground">
-              Manage conversations with your clients and providers
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() =>
-              navigate(
-                activeRole === "provider"
-                  ? "/dashboard/provider/notifications"
-                  : "/dashboard/client/notifications",
-              )
-            }
-          >
-            Notifications
-          </Button>
-        </div>
-      )}
-
       {errorMessage && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
       )}
 
-      <Card className="overflow-hidden border-border bg-card shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-3">
+      <Card className="h-[calc(100svh-8.5rem)] min-h-[38rem] overflow-hidden border-border bg-card shadow-sm">
+        <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-3">
           <div
-            className={`border-r border-border bg-card ${
+            className={`min-h-0 border-r border-border bg-card ${
               showThreadOnMobile ? "hidden lg:block" : "block"
             }`}
           >
-            <CardHeader className="space-y-3 pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" /> Conversations
-              </CardTitle>
-              <div className="rounded-md border border-border bg-background px-3 py-2">
-                <input
-                  value={conversationSearch}
-                  onChange={(event) =>
-                    setConversationSearch(event.target.value)
-                  }
-                  placeholder="Search conversations"
-                  className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="p-6 text-sm text-muted-foreground">
-                  Loading conversations...
+            <div className="flex h-full min-h-0 flex-col">
+              <CardHeader className="shrink-0 space-y-3 pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" /> Conversations
+                </CardTitle>
+                <div className="rounded-md border border-border bg-background px-3 py-2">
+                  <input
+                    value={conversationSearch}
+                    onChange={(event) =>
+                      setConversationSearch(event.target.value)
+                    }
+                    placeholder="Search conversations"
+                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  />
                 </div>
-              ) : filteredConversations.length === 0 ? (
-                <div className="p-6 text-sm text-muted-foreground">
-                  {conversationSearch
-                    ? "No matching conversations."
-                    : "No conversations yet."}
-                </div>
-              ) : (
-                <div className="max-h-[540px] overflow-y-auto">
-                  {filteredConversations.map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      onClick={() => handleSelectConversation(conversation.id)}
-                      className={`w-full border-b border-border/50 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
-                        selectedConversationId === conversation.id
-                          ? "bg-muted"
-                          : "bg-card"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {conversation.otherName
-                              .split(" ")
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="truncate font-semibold text-foreground">
-                              {conversation.otherName}
+              </CardHeader>
+              <CardContent className="min-h-0 flex-1 p-0">
+                {isLoading ? (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    Loading conversations...
+                  </div>
+                ) : filteredConversations.length === 0 ? (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    {conversationSearch
+                      ? "No matching conversations."
+                      : "No conversations yet."}
+                  </div>
+                ) : (
+                  <div className="h-full overflow-y-auto">
+                    {filteredConversations.map((conversation) => (
+                      <button
+                        key={conversation.id}
+                        onClick={() =>
+                          handleSelectConversation(conversation.id)
+                        }
+                        className={`w-full border-b border-border/50 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
+                          selectedConversationId === conversation.id
+                            ? "bg-muted"
+                            : "bg-card"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback className="bg-primary text-primary-foreground">
+                              {conversation.otherName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate font-semibold text-foreground">
+                                {conversation.otherName}
+                              </p>
+                              <span className="shrink-0 text-xs text-muted-foreground">
+                                {conversation.lastTime}
+                              </span>
+                            </div>
+                            {conversation.contextLabel && (
+                              <p className="mt-0.5 truncate text-xs text-primary">
+                                {conversation.contextLabel}
+                              </p>
+                            )}
+                            <p className="mt-1 truncate text-sm text-muted-foreground">
+                              {conversation.lastMessage || "No messages yet"}
                             </p>
-                            <span className="shrink-0 text-xs text-muted-foreground">
-                              {conversation.lastTime}
-                            </span>
                           </div>
-                          {conversation.contextLabel && (
-                            <p className="mt-0.5 truncate text-xs text-primary">
-                              {conversation.contextLabel}
-                            </p>
+                          {conversation.unreadCount > 0 && (
+                            <Badge className="ml-2 bg-primary text-primary-foreground">
+                              {conversation.unreadCount}
+                            </Badge>
                           )}
-                          <p className="mt-1 truncate text-sm text-muted-foreground">
-                            {conversation.lastMessage || "No messages yet"}
-                          </p>
                         </div>
-                        {conversation.unreadCount > 0 && (
-                          <Badge className="ml-2 bg-primary text-primary-foreground">
-                            {conversation.unreadCount}
-                          </Badge>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </div>
           </div>
 
           <div
-            className={`col-span-2 bg-card ${
+            className={`col-span-2 min-h-0 bg-card ${
               showThreadOnMobile ? "block" : "hidden lg:block"
             }`}
           >
-            <CardHeader className="border-b border-border">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden"
-                  onClick={() => setShowThreadOnMobile(false)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                  <CardTitle className="text-lg text-foreground">
-                    {selectedConversation
-                      ? selectedConversation.otherName
-                      : "Select a conversation"}
-                  </CardTitle>
-                  {selectedConversation?.contextLabel && (
-                    <p className="text-sm text-muted-foreground">
-                      {selectedConversation.contextLabel}
-                    </p>
-                  )}
+            <div className="flex h-full min-h-0 flex-col">
+              <CardHeader className="shrink-0 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden"
+                    onClick={() => setShowThreadOnMobile(false)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <CardTitle className="text-lg text-foreground">
+                      {selectedConversation
+                        ? selectedConversation.otherName
+                        : "Select a conversation"}
+                    </CardTitle>
+                    {selectedConversation?.contextLabel && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedConversation.contextLabel}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {selectedConversation ? (
-                <div className="flex flex-col h-[520px]">
-                  <div className="flex-1 space-y-4 overflow-y-auto bg-muted/20 px-6 py-4">
-                    {conversationMessages.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">
-                        No messages in this thread yet.
-                      </div>
-                    ) : (
-                      conversationMessages.map((message) => {
-                        const isMine = message.sender_id === user?.id;
-                        const rawName =
-                          (isMine
-                            ? (message.senderName ?? profile?.full_name)
-                            : (message.senderName ??
-                              selectedConversation?.otherName)) ??
-                          (isMine ? "You" : "User");
-                        const displayName = rawName.split(" ")[0] || rawName;
-                        const initials = rawName
-                          .split(" ")
-                          .map((part) => part[0])
-                          .slice(0, 2)
-                          .join("");
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex ${isMine ? "justify-end" : "justify-start"}`}
-                          >
-                            <div className="flex items-start gap-2">
-                              {!isMine && (
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                    {initials}
-                                  </AvatarFallback>
-                                </Avatar>
-                              )}
-                              <div
-                                className={`min-w-[11rem] max-w-[88%] rounded-2xl px-4 py-2 shadow-sm sm:max-w-[78%] ${
-                                  isMine
-                                    ? "bg-primary text-primary-foreground"
-                                    : "border border-border bg-card text-card-foreground"
-                                }`}
-                              >
-                                <p
-                                  className={`text-xs font-semibold ${
+              </CardHeader>
+              <CardContent className="min-h-0 flex-1 p-0 pb-0 [&:last-child]:pb-0">
+                {selectedConversation ? (
+                  <div className="flex h-full min-h-0 flex-col">
+                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-muted/20 px-6 py-4">
+                      {conversationMessages.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">
+                          No messages in this thread yet.
+                        </div>
+                      ) : (
+                        conversationMessages.map((message) => {
+                          const isMine = message.sender_id === user?.id;
+                          const rawName =
+                            (isMine
+                              ? (message.senderName ?? profile?.full_name)
+                              : (message.senderName ??
+                                selectedConversation?.otherName)) ??
+                            (isMine ? "You" : "User");
+                          const displayName = rawName.split(" ")[0] || rawName;
+                          const initials = rawName
+                            .split(" ")
+                            .map((part) => part[0])
+                            .slice(0, 2)
+                            .join("");
+                          return (
+                            <div
+                              key={message.id}
+                              className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                            >
+                              <div className="flex items-start gap-2">
+                                {!isMine && (
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                      {initials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                                <div
+                                  className={`min-w-[11rem] max-w-[88%] rounded-2xl px-4 py-2 shadow-sm sm:max-w-[78%] ${
                                     isMine
-                                      ? "text-primary-foreground/80"
-                                      : "text-muted-foreground"
-                                  } break-words`}
-                                >
-                                  {displayName}
-                                </p>
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                                  {message.content}
-                                </p>
-                                <p
-                                  className={`mt-1 text-[11px] ${
-                                    isMine
-                                      ? "text-primary-foreground/80"
-                                      : "text-muted-foreground"
+                                      ? "bg-primary text-primary-foreground"
+                                      : "border border-border bg-card text-card-foreground"
                                   }`}
                                 >
-                                  {formatMessageTime(message.created_at)}
-                                </p>
+                                  <p
+                                    className={`text-xs font-semibold ${
+                                      isMine
+                                        ? "text-primary-foreground/80"
+                                        : "text-muted-foreground"
+                                    } break-words`}
+                                  >
+                                    {displayName}
+                                  </p>
+                                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                    {message.content}
+                                  </p>
+                                  <p
+                                    className={`mt-1 text-[11px] ${
+                                      isMine
+                                        ? "text-primary-foreground/80"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {formatMessageTime(message.created_at)}
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })
-                    )}
-                    <div ref={threadEndRef} />
-                  </div>
-                  <div className="border-t border-border bg-card px-6 py-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                      <Textarea
-                        value={draft}
-                        onChange={(event) => setDraft(event.target.value)}
-                        onKeyDown={handleDraftKeyDown}
-                        placeholder="Type your message..."
-                        className="min-h-[44px] max-h-[180px] flex-1 resize-none bg-background"
-                      />
-                      <Button
-                        onClick={handleSend}
-                        disabled={!draft.trim()}
-                        className="w-full shrink-0 sm:w-auto"
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Send
-                      </Button>
+                          );
+                        })
+                      )}
+                      <div ref={threadEndRef} />
                     </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Press Enter to send, Shift+Enter for new line.
-                    </p>
+                    <div className="shrink-0 border-t border-border bg-card px-6 py-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                        <Textarea
+                          value={draft}
+                          onChange={(event) => setDraft(event.target.value)}
+                          onKeyDown={handleDraftKeyDown}
+                          placeholder="Type your message..."
+                          className="min-h-[44px] max-h-[180px] flex-1 resize-none bg-background"
+                        />
+                        <Button
+                          onClick={handleSend}
+                          disabled={!draft.trim()}
+                          className="w-full shrink-0 sm:w-auto"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-6 text-sm text-muted-foreground">
-                  Select a conversation to start messaging.
-                </div>
-              )}
-            </CardContent>
+                ) : (
+                  <div className="p-6 text-sm text-muted-foreground">
+                    Select a conversation to start messaging.
+                  </div>
+                )}
+              </CardContent>
+            </div>
           </div>
         </div>
       </Card>
     </>
   );
 
-  if (embedded) {
-    return <div className="space-y-6">{content}</div>;
-  }
-
-  return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-6xl mx-auto">{content}</div>
-    </div>
-  );
+  return <div className="min-h-0 pt-6">{content}</div>;
 }

@@ -17,6 +17,9 @@ export type Database = {
       bookings: {
         Row: {
           amount: number;
+          base_amount: number | null;
+          billable_hours: number | null;
+          bonus_amount: number;
           cancellation_reason: string | null;
           cancelled_at: string | null;
           client_id: string;
@@ -25,15 +28,18 @@ export type Database = {
           created_at: string | null;
           description: string | null;
           duration_hours: number | null;
+          hourly_rate_snapshot: number | null;
           id: string;
           job_id: string | null;
           location: Json;
           metadata: Json | null;
+          minimum_billable_hours_snapshot: number | null;
           payment_method: Database["public"]["Enums"]["payment_method"] | null;
           payment_status: Database["public"]["Enums"]["payment_status"] | null;
           photo_urls: string[] | null;
           provider_id: string;
           quote_id: string | null;
+          requested_hours: number | null;
           scheduled_date: string;
           scheduled_time: string | null;
           service_type: string;
@@ -44,6 +50,9 @@ export type Database = {
         };
         Insert: {
           amount: number;
+          base_amount?: number | null;
+          billable_hours?: number | null;
+          bonus_amount?: number;
           cancellation_reason?: string | null;
           cancelled_at?: string | null;
           client_id: string;
@@ -52,15 +61,18 @@ export type Database = {
           created_at?: string | null;
           description?: string | null;
           duration_hours?: number | null;
+          hourly_rate_snapshot?: number | null;
           id?: string;
           job_id?: string | null;
           location: Json;
           metadata?: Json | null;
+          minimum_billable_hours_snapshot?: number | null;
           payment_method?: Database["public"]["Enums"]["payment_method"] | null;
           payment_status?: Database["public"]["Enums"]["payment_status"] | null;
           photo_urls?: string[] | null;
           provider_id: string;
           quote_id?: string | null;
+          requested_hours?: number | null;
           scheduled_date: string;
           scheduled_time?: string | null;
           service_type: string;
@@ -71,6 +83,9 @@ export type Database = {
         };
         Update: {
           amount?: number;
+          base_amount?: number | null;
+          billable_hours?: number | null;
+          bonus_amount?: number;
           cancellation_reason?: string | null;
           cancelled_at?: string | null;
           client_id?: string;
@@ -79,15 +94,18 @@ export type Database = {
           created_at?: string | null;
           description?: string | null;
           duration_hours?: number | null;
+          hourly_rate_snapshot?: number | null;
           id?: string;
           job_id?: string | null;
           location?: Json;
           metadata?: Json | null;
+          minimum_billable_hours_snapshot?: number | null;
           payment_method?: Database["public"]["Enums"]["payment_method"] | null;
           payment_status?: Database["public"]["Enums"]["payment_status"] | null;
           photo_urls?: string[] | null;
           provider_id?: string;
           quote_id?: string | null;
+          requested_hours?: number | null;
           scheduled_date?: string;
           scheduled_time?: string | null;
           service_type?: string;
@@ -624,6 +642,7 @@ export type Database = {
           rating: number | null;
           response_time: number | null;
           service_areas: string[] | null;
+          service_minimum_hours: Json;
           services: string[];
           total_earned: number | null;
           total_reviews: number | null;
@@ -651,6 +670,7 @@ export type Database = {
           rating?: number | null;
           response_time?: number | null;
           service_areas?: string[] | null;
+          service_minimum_hours?: Json;
           services: string[];
           total_earned?: number | null;
           total_reviews?: number | null;
@@ -678,6 +698,7 @@ export type Database = {
           rating?: number | null;
           response_time?: number | null;
           service_areas?: string[] | null;
+          service_minimum_hours?: Json;
           services?: string[];
           total_earned?: number | null;
           total_reviews?: number | null;
@@ -1216,6 +1237,92 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_quote: {
+        Args: {
+          p_quote_id: string;
+        };
+        Returns: string;
+      };
+      cancel_booking: {
+        Args: {
+          p_booking_id: string;
+          p_reason?: string;
+        };
+        Returns: undefined;
+      };
+      complete_booking: {
+        Args: {
+          p_booking_id: string;
+        };
+        Returns: undefined;
+      };
+      compute_wallet_balance: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      confirm_booking: {
+        Args: {
+          p_booking_id: string;
+        };
+        Returns: undefined;
+      };
+      create_direct_booking: {
+        Args: {
+          p_provider_id: string;
+          p_service_type: string;
+          p_description: string;
+          p_scheduled_date: string;
+          p_scheduled_time?: string | null;
+          p_duration_hours?: number | null;
+          p_location?: Json;
+          p_amount?: number | null;
+          p_special_instructions?: string | null;
+        };
+        Returns: string;
+      };
+      decline_booking: {
+        Args: {
+          p_booking_id: string;
+        };
+        Returns: undefined;
+      };
+      dispute_booking: {
+        Args: {
+          p_booking_id: string;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      release_escrow: {
+        Args: {
+          p_booking_id: string;
+        };
+        Returns: undefined;
+      };
+      request_withdrawal: {
+        Args: {
+          p_amount: number;
+          p_currency?: string;
+          p_note?: string | null;
+        };
+        Returns: string;
+      };
+      send_booking_bonus: {
+        Args: {
+          p_booking_id: string;
+          p_amount: number;
+          p_note?: string | null;
+        };
+        Returns: string;
+      };
+      start_booking: {
+        Args: {
+          p_booking_id: string;
+        };
+        Returns: undefined;
+      };
       start_role_onboarding: {
         Args: {
           p_role: Database["public"]["Enums"]["user_role"];

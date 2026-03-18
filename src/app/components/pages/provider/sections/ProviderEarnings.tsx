@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/card";
 import { Badge } from "../../../ui/badge";
@@ -18,6 +19,7 @@ type EarningsTransaction = {
 
 export const ProviderEarnings = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<EarningsTransaction[]>([]);
@@ -81,8 +83,8 @@ export const ProviderEarnings = () => {
 
         return {
           id: payment.id,
-          service: payment.booking?.service_type ?? "Service",
-          client: payment.client?.full_name ?? "Client",
+          service: payment.booking?.service_type ?? t("providerJobs.service"),
+          client: payment.client?.full_name ?? t("providerJobs.client"),
           date: formattedDate,
           createdAt: payment.created_at ?? null,
           status,
@@ -117,7 +119,7 @@ export const ProviderEarnings = () => {
     };
 
     fetchEarnings();
-  }, [user?.id]);
+  }, [t, user?.id]);
 
   const earningsTrend = useMemo(() => {
     if (summary.total <= 0) return 0;
@@ -133,21 +135,23 @@ export const ProviderEarnings = () => {
           <Card className="border border-[#F7C876]/40 bg-[#FFF7E8]">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-[#7C5A1E]">
-                Total Earnings
+                {t("providerEarnings.totalEarnings")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-semibold text-[#2B2B2B]">
                 ${summary.total.toLocaleString()}
               </p>
-              <p className="text-xs text-[#7C5A1E] mt-1">All time</p>
+              <p className="text-xs text-[#7C5A1E] mt-1">
+                {t("providerEarnings.allTime")}
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border border-[#F7C876]/40 bg-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                This Month
+                {t("providerEarnings.thisMonth")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -156,7 +160,7 @@ export const ProviderEarnings = () => {
               </p>
               <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
                 <TrendingUp className="h-4 w-4" />
-                {earningsTrend}% of total earnings
+                {earningsTrend}% {t("providerEarnings.ofTotalEarnings")}
               </p>
             </CardContent>
           </Card>
@@ -164,7 +168,7 @@ export const ProviderEarnings = () => {
           <Card className="border border-[#F7C876]/40 bg-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
-                Pending Payout
+                {t("providerEarnings.pendingPayout")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -176,7 +180,7 @@ export const ProviderEarnings = () => {
                 className="mt-3 bg-[#F7C876] text-[#2B2B2B] hover:bg-[#EFA055]"
                 disabled={summary.pending <= 0}
               >
-                Request payout
+                {t("providerEarnings.requestPayout")}
               </Button>
             </CardContent>
           </Card>
@@ -184,10 +188,12 @@ export const ProviderEarnings = () => {
 
         <Card className="border border-gray-200/80">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Transaction History</CardTitle>
+            <CardTitle>{t("providerEarnings.transactionHistory")}</CardTitle>
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <Wallet className="h-4 w-4" />
-              {transactions.length} transactions
+              {t("providerEarnings.transactions", {
+                count: transactions.length,
+              })}
             </div>
           </CardHeader>
           <CardContent>
@@ -206,7 +212,7 @@ export const ProviderEarnings = () => {
               </div>
             ) : transactions.length === 0 ? (
               <div className="rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
-                No earnings yet. Completed jobs will appear here.
+                {t("providerEarnings.empty")}
               </div>
             ) : (
               <div className="space-y-3">
@@ -258,14 +264,14 @@ export const ProviderEarnings = () => {
                         }
                       >
                         {transaction.status === "released"
-                          ? "Paid"
+                          ? t("providerEarnings.paid")
                           : transaction.status === "held"
-                            ? "Held"
+                            ? t("providerEarnings.held")
                             : transaction.status === "refunded"
-                              ? "Refunded"
+                              ? t("providerEarnings.refunded")
                               : transaction.status === "disputed"
-                                ? "Disputed"
-                                : "Pending"}
+                                ? t("providerEarnings.disputed")
+                                : t("providerEarnings.pending")}
                       </Badge>
                     </div>
                   </div>

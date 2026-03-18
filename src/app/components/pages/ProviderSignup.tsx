@@ -10,15 +10,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { SignupTabs } from "./SignupTabs";
 import { useServiceCategories } from "@/lib/useServiceCategories";
+import { useTranslation } from "react-i18next";
+import { useAllowedCountries } from "@/app/hooks/useAllowedCountries";
+import {
+  getCurrencyForCountry,
+  normalizeCountryCode,
+} from "@/app/lib/countryConfig";
+import { useEffect } from "react";
 
 export function ProviderSignup() {
   const navigate = useNavigate();
   const { signUp } = useAuth();
   const { categories } = useServiceCategories();
+  const { t } = useTranslation();
+  const { allowedCountries, isLoading: countriesLoading } =
+    useAllowedCountries();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
+    country: "",
     serviceCategory: "",
     experience: "",
     bio: "",
@@ -29,15 +40,41 @@ export function ProviderSignup() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (formData.country) {
+      return;
+    }
+
+    const firstCountry = allowedCountries[0]?.code;
+    if (!firstCountry) {
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, country: firstCountry }));
+  }, [allowedCountries, formData.country]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setInfoMessage(null);
 
     if (formData.password !== formData.confirmPassword) {
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage(t("providerSignup.passwordMismatch"));
       return;
     }
+
+    if (!formData.phone.trim()) {
+      setErrorMessage(t("providerSignup.phoneRequired"));
+      return;
+    }
+
+    const country = normalizeCountryCode(formData.country);
+    if (!country) {
+      setErrorMessage(t("providerSignup.countryRequired"));
+      return;
+    }
+
+    const currency = getCurrencyForCountry(country);
 
     setIsSubmitting(true);
     try {
@@ -46,7 +83,8 @@ export function ProviderSignup() {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        phone: formData.phone,
+        phone: formData.phone.trim(),
+        country,
         role: "provider",
         businessName: formData.fullName,
         category: formData.serviceCategory,
@@ -61,7 +99,9 @@ export function ProviderSignup() {
             role: "provider",
             email: formData.email,
             full_name: formData.fullName,
-            phone: formData.phone,
+            phone: formData.phone.trim(),
+            country,
+            currency,
           },
           { onConflict: "id" },
         );
@@ -75,6 +115,8 @@ export function ProviderSignup() {
           .upsert(
             {
               user_id: userId,
+              country,
+              currency,
               business_name: formData.fullName,
               bio: formData.bio,
               services: [formData.serviceCategory],
@@ -112,10 +154,10 @@ export function ProviderSignup() {
         <Card>
           <CardHeader className="mb-4">
             <CardTitle className="text-2xl">
-              Become a Service Provider
+              {t("providerSignup.title")}
             </CardTitle>
             <p className="text-muted-foreground">
-              Start earning with your skills today
+              {t("providerSignup.subtitle")}
             </p>
           </CardHeader>
 
@@ -133,13 +175,13 @@ export function ProviderSignup() {
               )}
               <div>
                 <Label htmlFor="fullName">
-                  Full Name / Business Name{" "}
+                  {t("providerSignup.fullName")}{" "}
                   <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="John's Handyman Services"
+                  placeholder={t("providerSignup.fullNamePlaceholder")}
                   value={formData.fullName}
                   onChange={(e) =>
                     setFormData({ ...formData, fullName: e.target.value })
@@ -149,13 +191,50 @@ export function ProviderSignup() {
               </div>
 
               <div>
+                <Label htmlFor="country">
+                  {t("providerSignup.country")}{" "}
+                  <span className="text-red-600">*</span>
+                </Label>
+                <select
+                  id="country"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  value={formData.country}
+                  onChange={(e) =>
+                    setFormData({ ...formData, country: e.target.value })
+                  }
+                  disabled={countriesLoading}
+                  required
+                >
+                  {countriesLoading ? (
+                    <option value="">
+                      {t("providerSignup.loadingCountries")}
+                    </option>
+                  ) : (
+                    allowedCountries.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {formData.country && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {t("providerSignup.currencyHint", {
+                      currency: getCurrencyForCountry(formData.country),
+                    })}
+                  </p>
+                )}
+              </div>
+
+              <div>
                 <Label htmlFor="email">
-                  Email Address <span className="text-red-600">*</span>
+                  {t("providerSignup.emailLabel")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="provider@example.com"
+                  placeholder={t("providerSignup.emailPlaceholder")}
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -166,12 +245,13 @@ export function ProviderSignup() {
 
               <div>
                 <Label htmlFor="phone">
-                  Phone Number <span className="text-red-600">*</span>
+                  {t("providerSignup.phone")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder={t("providerSignup.phonePlaceholder")}
                   value={formData.phone}
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
@@ -182,7 +262,7 @@ export function ProviderSignup() {
 
               <div>
                 <Label htmlFor="serviceCategory">
-                  Primary Service Category{" "}
+                  {t("providerSignup.serviceCategory")}{" "}
                   <span className="text-red-600">*</span>
                 </Label>
                 <select
@@ -197,7 +277,9 @@ export function ProviderSignup() {
                   }
                   required
                 >
-                  <option value="">Select a category</option>
+                  <option value="">
+                    {t("providerSignup.serviceCategoryPlaceholder")}
+                  </option>
                   {categories.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.name}
@@ -208,12 +290,13 @@ export function ProviderSignup() {
 
               <div>
                 <Label htmlFor="experience">
-                  Years of Experience <span className="text-red-600">*</span>
+                  {t("providerSignup.experience")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="experience"
                   type="number"
-                  placeholder="5"
+                  placeholder={t("providerSignup.experiencePlaceholder")}
                   min="0"
                   value={formData.experience}
                   onChange={(e) =>
@@ -225,11 +308,12 @@ export function ProviderSignup() {
 
               <div>
                 <Label htmlFor="bio">
-                  About Your Services <span className="text-red-600">*</span>
+                  {t("providerSignup.bio")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Textarea
                   id="bio"
-                  placeholder="Tell clients about your experience, skills, and what makes you unique..."
+                  placeholder={t("providerSignup.bioPlaceholder")}
                   value={formData.bio}
                   onChange={(e) =>
                     setFormData({ ...formData, bio: e.target.value })
@@ -241,7 +325,8 @@ export function ProviderSignup() {
 
               <div>
                 <Label htmlFor="password">
-                  Password <span className="text-red-600">*</span>
+                  {t("providerSignup.password")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="password"
@@ -257,7 +342,8 @@ export function ProviderSignup() {
 
               <div>
                 <Label htmlFor="confirmPassword">
-                  Confirm Password <span className="text-red-600">*</span>
+                  {t("providerSignup.confirmPassword")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="confirmPassword"
@@ -293,28 +379,28 @@ export function ProviderSignup() {
                 className="w-full bg-[#F7C876] hover:bg-[#EFA055] py-6"
               >
                 {isSubmitting
-                  ? "Creating Account..."
-                  : "Create Provider Account"}
+                  ? t("providerSignup.submitting")
+                  : t("providerSignup.button")}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-gray-600">
-                Already have an account?{" "}
+                {t("providerSignup.alreadyHaveAccount")}{" "}
                 <button
                   onClick={() => navigate("/signin")}
                   className="text-[#F7C876] hover:text-[#EFA055] font-semibold"
                 >
-                  Sign In
+                  {t("providerSignup.signInLink")}
                 </button>
               </p>
               <p className="text-gray-600 mt-3">
-                Looking for services?{" "}
+                {t("providerSignup.lookingForServices")}{" "}
                 <button
                   onClick={() => navigate("/client-signup")}
                   className="text-[#F7C876] hover:text-[#EFA055] font-semibold"
                 >
-                  Sign Up as Client
+                  {t("providerSignup.signUpAsClient")}
                 </button>
               </p>
             </div>

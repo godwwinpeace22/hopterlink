@@ -6,12 +6,14 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Mail } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,12 +44,12 @@ export function ForgotPassword() {
         <Card>
           <CardHeader className="mb-4">
             <CardTitle className="text-2xl">
-              {sent ? "Check your email" : "Forgot your password?"}
+              {sent ? t("forgotPassword.sentTitle") : t("forgotPassword.title")}
             </CardTitle>
             <p className="text-muted-foreground">
               {sent
-                ? "We've sent a password reset link to your email address."
-                : "Enter your email and we'll send you a link to reset your password."}
+                ? t("forgotPassword.sentSubtitle")
+                : t("forgotPassword.subtitle")}
             </p>
           </CardHeader>
 
@@ -60,23 +62,20 @@ export function ForgotPassword() {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  A reset link has been sent to{" "}
-                  <span className="font-semibold text-gray-900">{email}</span>.
-                  Check your inbox (and spam folder) and click the link to set a
-                  new password.
+                  {t("forgotPassword.sentBody", { email })}
                 </p>
                 <button
                   onClick={() => setSent(false)}
                   className="w-full text-sm text-amber-600 hover:text-amber-700 font-medium"
                 >
-                  Didn't receive the email? Try again
+                  {t("forgotPassword.resend")}
                 </button>
                 <Link
                   to="/signin"
                   className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
+                  {t("forgotPassword.backToSignIn")}
                 </Link>
               </div>
             ) : (
@@ -89,12 +88,12 @@ export function ForgotPassword() {
 
                 <div>
                   <Label htmlFor="email" className="mb-3">
-                    Email Address
+                    {t("forgotPassword.emailLabel")}
                   </Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t("forgotPassword.emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -106,7 +105,9 @@ export function ForgotPassword() {
                   disabled={isSubmitting}
                   className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6"
                 >
-                  {isSubmitting ? "Sending…" : "Send Reset Link"}
+                  {isSubmitting
+                    ? t("forgotPassword.sending")
+                    : t("forgotPassword.button")}
                 </Button>
 
                 <Link
@@ -114,7 +115,7 @@ export function ForgotPassword() {
                   className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
+                  {t("forgotPassword.backToSignIn")}
                 </Link>
               </form>
             )}

@@ -1,4 +1,5 @@
 import { useNavigate } from "@/lib/router";
+import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { Button } from "../../ui/button";
@@ -35,6 +36,7 @@ export function ProviderDashboardHeader({
 }: ProviderDashboardHeaderProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { t } = useTranslation();
 
   const handleSignOut = async () => {
     await signOut();
@@ -79,26 +81,28 @@ export function ProviderDashboardHeader({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Account</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {t("providerDashboard.accountMenuLabel")}
+              </DropdownMenuLabel>
               <DropdownMenuItem
                 className="cursor-pointer"
                 onSelect={() => navigate("/dashboard/provider/profile")}
               >
-                Profile
+                {t("providerDashboard.profileMenuItem")}
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 className="cursor-pointer"
                 onSelect={() => navigate("/dashboard/provider/settings")}
               >
-                Settings
+                {t("providerDashboard.settingsMenuItem")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer text-red-600 focus:text-red-600"
                 onSelect={handleSignOut}
               >
-                Sign out
+                {t("providerDashboard.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

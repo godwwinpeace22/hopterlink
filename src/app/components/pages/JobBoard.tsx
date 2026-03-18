@@ -38,14 +38,15 @@ import {
   type ProviderJob,
 } from "@/app/hooks/useProviderGetJobs";
 import { useServiceCategories } from "@/lib/useServiceCategories";
+import { useTranslation } from "react-i18next";
 
 type Job = ProviderJob;
 
-const formatDate = (dateString?: string | null) => {
+const formatDate = (dateString?: string | null, locale = "en-US") => {
   if (!dateString) return "";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -83,6 +84,7 @@ const getDateThreshold = (
 };
 
 export function JobBoard() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { categorySlugsWithAll, slugToName } = useServiceCategories();
   // const navigate = useNavigate();
@@ -115,12 +117,12 @@ export function JobBoard() {
 
   const handleSubmitQuote = async () => {
     if (!user?.id || !selectedJob) {
-      setErrorMessage("You must be signed in to submit a quote.");
+      setErrorMessage(t("jobBoard.errors.mustSignInToQuote"));
       return;
     }
 
     if (selectedJob.hasQuoted) {
-      setErrorMessage("You have already submitted a quote for this job.");
+      setErrorMessage(t("jobBoard.errors.alreadyQuoted"));
       return;
     }
 
@@ -130,7 +132,7 @@ export function JobBoard() {
     try {
       const amountValue = Number.parseFloat(quoteData.amount);
       if (Number.isNaN(amountValue)) {
-        setErrorMessage("Please enter a valid quote amount.");
+        setErrorMessage(t("jobBoard.errors.invalidQuoteAmount"));
         setIsSubmitting(false);
         return;
       }
@@ -152,12 +154,12 @@ export function JobBoard() {
 
       setShowQuoteDialog(false);
       setQuoteData({ amount: "", timeline: "", message: "" });
-      toast.success(
-        "Quote submitted! The client will review and may message you.",
-      );
+      toast.success(t("jobBoard.quoteSuccess"));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to submit quote.";
+        error instanceof Error
+          ? error.message
+          : t("jobBoard.errors.submitQuote");
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -225,10 +227,10 @@ export function JobBoard() {
 
   const content = (
     <div className="space-y-6 pt-3">
-      <PageHeader title="Job Board" hideBack />
+      <PageHeader title={t("jobBoard.title")} hideBack />
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          Showing {filteredJobs.length} jobs
+          {t("jobBoard.showingCount", { count: filteredJobs.length })}
         </p>
         <Button
           variant="outline"
@@ -237,7 +239,7 @@ export function JobBoard() {
           className="flex items-center gap-2"
         >
           <SlidersHorizontal className="h-4 w-4" />
-          Filters
+          {t("jobBoard.filters")}
         </Button>
       </div>
 
@@ -249,7 +251,7 @@ export function JobBoard() {
           }
           onClick={() => setBudgetTypeFilter("all")}
         >
-          All Types
+          {t("jobBoard.types.all")}
         </Button>
         <Button
           variant={budgetTypeFilter === "fixed" ? "default" : "outline"}
@@ -260,7 +262,7 @@ export function JobBoard() {
           }
           onClick={() => setBudgetTypeFilter("fixed")}
         >
-          Fixed
+          {t("jobBoard.types.fixed")}
         </Button>
         <Button
           variant={budgetTypeFilter === "hourly" ? "default" : "outline"}
@@ -271,19 +273,19 @@ export function JobBoard() {
           }
           onClick={() => setBudgetTypeFilter("hourly")}
         >
-          Hourly
+          {t("jobBoard.types.hourly")}
         </Button>
       </div>
 
       <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
         <SheetContent side="right" className="w-full sm:max-w-sm">
           <SheetHeader>
-            <SheetTitle>Filter Jobs</SheetTitle>
+            <SheetTitle>{t("jobBoard.filterJobs")}</SheetTitle>
           </SheetHeader>
 
           <div className="mt-6 space-y-6 px-4">
             <div>
-              <Label className="text-sm">Category</Label>
+              <Label className="text-sm">{t("jobBoard.category")}</Label>
               <div className="mt-3 flex flex-wrap gap-2">
                 {categorySlugsWithAll.map((slug) => (
                   <Button
@@ -295,7 +297,7 @@ export function JobBoard() {
                     onClick={() => setFilter(slug)}
                   >
                     {slug === "all"
-                      ? `All Jobs (${jobs.length})`
+                      ? t("jobBoard.allJobsCount", { count: jobs.length })
                       : (slugToName.get(slug) ?? slug)}
                   </Button>
                 ))}
@@ -304,7 +306,7 @@ export function JobBoard() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="date-filter">Date</Label>
+                <Label htmlFor="date-filter">{t("jobBoard.date")}</Label>
                 <select
                   id="date-filter"
                   className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
@@ -313,14 +315,22 @@ export function JobBoard() {
                     setDateFilter(event.target.value as typeof dateFilter)
                   }
                 >
-                  <option value="all">All time</option>
-                  <option value="last7">Last 7 days</option>
-                  <option value="last30">Last 30 days</option>
-                  <option value="last90">Last 90 days</option>
+                  <option value="all">
+                    {t("jobBoard.dateOptions.allTime")}
+                  </option>
+                  <option value="last7">
+                    {t("jobBoard.dateOptions.last7")}
+                  </option>
+                  <option value="last30">
+                    {t("jobBoard.dateOptions.last30")}
+                  </option>
+                  <option value="last90">
+                    {t("jobBoard.dateOptions.last90")}
+                  </option>
                 </select>
               </div>
               <div>
-                <Label htmlFor="sort-filter">Sort by</Label>
+                <Label htmlFor="sort-filter">{t("jobBoard.sortBy")}</Label>
                 <select
                   id="sort-filter"
                   className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
@@ -329,12 +339,16 @@ export function JobBoard() {
                     setSortByDate(event.target.value as typeof sortByDate)
                   }
                 >
-                  <option value="newest">Newest</option>
-                  <option value="oldest">Oldest</option>
+                  <option value="newest">
+                    {t("jobBoard.sortOptions.newest")}
+                  </option>
+                  <option value="oldest">
+                    {t("jobBoard.sortOptions.oldest")}
+                  </option>
                 </select>
               </div>
               <div>
-                <Label htmlFor="urgency-filter">Urgency</Label>
+                <Label htmlFor="urgency-filter">{t("jobBoard.urgency")}</Label>
                 <select
                   id="urgency-filter"
                   className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
@@ -343,31 +357,37 @@ export function JobBoard() {
                     setUrgencyFilter(event.target.value as typeof urgencyFilter)
                   }
                 >
-                  <option value="all">All</option>
-                  <option value="urgent">Urgent</option>
-                  <option value="flexible">Flexible</option>
+                  <option value="all">
+                    {t("jobBoard.urgencyOptions.all")}
+                  </option>
+                  <option value="urgent">
+                    {t("jobBoard.urgencyOptions.urgent")}
+                  </option>
+                  <option value="flexible">
+                    {t("jobBoard.urgencyOptions.flexible")}
+                  </option>
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="amount-min">Min amount</Label>
+                <Label htmlFor="amount-min">{t("jobBoard.minAmount")}</Label>
                 <Input
                   id="amount-min"
                   type="number"
-                  placeholder="0"
+                  placeholder={t("jobBoard.minAmountPlaceholder")}
                   className="mt-1"
                   value={amountMin}
                   onChange={(event) => setAmountMin(event.target.value)}
                 />
               </div>
               <div>
-                <Label htmlFor="amount-max">Max amount</Label>
+                <Label htmlFor="amount-max">{t("jobBoard.maxAmount")}</Label>
                 <Input
                   id="amount-max"
                   type="number"
-                  placeholder="1000"
+                  placeholder={t("jobBoard.maxAmountPlaceholder")}
                   className="mt-1"
                   value={amountMax}
                   onChange={(event) => setAmountMax(event.target.value)}
@@ -389,13 +409,13 @@ export function JobBoard() {
                 setUrgencyFilter("all");
               }}
             >
-              Clear filters
+              {t("jobBoard.clearFilters")}
             </Button>
             <Button
               className="w-full bg-[#F7C876] hover:bg-[#EFA055]"
               onClick={() => setIsFilterOpen(false)}
             >
-              Apply Filters
+              {t("jobBoard.applyFilters")}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -406,14 +426,16 @@ export function JobBoard() {
         {(errorMessage || error) && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {errorMessage ??
-              (error instanceof Error ? error.message : "Failed to load jobs.")}
+              (error instanceof Error
+                ? error.message
+                : t("jobBoard.errors.loadJobs"))}
           </div>
         )}
 
         {isLoading && (
           <Card className="border border-gray-200/80 animate-pulse">
             <CardContent className="py-12 text-center text-gray-600">
-              Loading jobs...
+              {t("jobBoard.loadingJobs")}
             </CardContent>
           </Card>
         )}
@@ -440,11 +462,14 @@ export function JobBoard() {
                         {job.urgency === "urgent" && (
                           <Badge className="bg-red-50 text-red-600 border-red-100 inline-flex items-center gap-1 font-medium">
                             <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                            Urgent
+                            {t("jobBoard.urgencyOptions.urgent")}
                           </Badge>
                         )}
                         <span className="text-xs text-gray-500">
-                          {formatDate(job.postedAt ?? job.postedDate)}
+                          {formatDate(
+                            job.postedAt ?? job.postedDate,
+                            i18n.language,
+                          )}
                         </span>
                       </div>
                     </div>
@@ -461,17 +486,19 @@ export function JobBoard() {
                         ${job.budget}
                       </span>
                       <span className="text-gray-400">
-                        {job.budgetType === "fixed" ? "Fixed" : "Per hour"}
+                        {job.budgetType === "fixed"
+                          ? t("jobBoard.types.fixed")
+                          : t("jobBoard.perHour")}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <MapPin className="h-4 w-4 text-gray-400" />
-                      {formatLocation(job.location) || "Location not provided"}
+                      {formatLocation(job.location) ||
+                        t("jobBoard.locationNotProvided")}
                     </div>
                     <div className="flex items-center gap-1">
                       <MessageSquare className="h-4 w-4 text-gray-400" />
-                      {job.quotesCount}{" "}
-                      {job.quotesCount === 1 ? "quote" : "quotes"}
+                      {t("jobBoard.quoteCount", { count: job.quotesCount })}
                     </div>
                   </div>
                 </div>
@@ -487,12 +514,16 @@ export function JobBoard() {
                         onClick={() => setSelectedJob(job)}
                         disabled={job.hasQuoted}
                       >
-                        {job.hasQuoted ? "Quote Submitted" : "Submit Quote"}
+                        {job.hasQuoted
+                          ? t("jobBoard.quoteSubmitted")
+                          : t("jobBoard.submitQuote")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle>Submit Your Quote</DialogTitle>
+                        <DialogTitle>
+                          {t("jobBoard.submitYourQuote")}
+                        </DialogTitle>
                       </DialogHeader>
 
                       <div className="space-y-4 mt-4">
@@ -505,11 +536,15 @@ export function JobBoard() {
                             {selectedJob?.description}
                           </p>
                           <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <span>Client's Budget: ${selectedJob?.budget}</span>
+                            <span>
+                              {t("jobBoard.clientBudget", {
+                                budget: selectedJob?.budget ?? "",
+                              })}
+                            </span>
                             <span>•</span>
                             <span>
                               {formatLocation(selectedJob?.location) ||
-                                "Location not provided"}
+                                t("jobBoard.locationNotProvided")}
                             </span>
                           </div>
                         </div>
@@ -517,7 +552,7 @@ export function JobBoard() {
                         {/* Quote Form */}
                         <div>
                           <Label htmlFor="amount">
-                            Your Quote Amount{" "}
+                            {t("jobBoard.yourQuoteAmount")}{" "}
                             <span className="text-red-600">*</span>
                           </Label>
                           <div className="relative mt-1">
@@ -525,7 +560,7 @@ export function JobBoard() {
                             <Input
                               id="amount"
                               type="number"
-                              placeholder="Enter your price"
+                              placeholder={t("jobBoard.quoteAmountPlaceholder")}
                               className="pl-10"
                               value={quoteData.amount}
                               onChange={(e) =>
@@ -538,23 +573,23 @@ export function JobBoard() {
                             />
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
-                            Be competitive but fair. Commission:{" "}
+                            {t("jobBoard.commissionLabel")}{" "}
                             {parseFloat(quoteData.amount || "0") > 500
-                              ? "3.5%"
-                              : "5%"}
+                              ? t("jobBoard.commissionHigh")
+                              : t("jobBoard.commissionStandard")}
                           </p>
                         </div>
 
                         <div>
                           <Label htmlFor="timeline">
-                            Estimated Timeline{" "}
+                            {t("jobBoard.estimatedTimeline")}{" "}
                             <span className="text-red-600">*</span>
                           </Label>
                           <div className="relative mt-1">
                             <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
                               id="timeline"
-                              placeholder="e.g., 2-3 days, Available tomorrow"
+                              placeholder={t("jobBoard.timelinePlaceholder")}
                               className="pl-10"
                               value={quoteData.timeline}
                               onChange={(e) =>
@@ -570,12 +605,12 @@ export function JobBoard() {
 
                         <div>
                           <Label htmlFor="message">
-                            Message to Client{" "}
+                            {t("jobBoard.messageToClient")}{" "}
                             <span className="text-red-600">*</span>
                           </Label>
                           <Textarea
                             id="message"
-                            placeholder="Introduce yourself, explain your approach, mention relevant experience..."
+                            placeholder={t("jobBoard.messagePlaceholder")}
                             value={quoteData.message}
                             onChange={(e) =>
                               setQuoteData({
@@ -591,10 +626,8 @@ export function JobBoard() {
 
                         <div className="bg-[#FDEFD6] border border-[#F7C876] rounded-lg p-3 text-sm">
                           <p className="text-gray-700">
-                            💡 <strong>Tip:</strong> Include details about your
-                            experience with similar jobs and why you're the best
-                            fit. Be professional and responsive to increase your
-                            chances!
+                            <strong>{t("jobBoard.tipTitle")}</strong>{" "}
+                            {t("jobBoard.tipBody")}
                           </p>
                         </div>
 
@@ -611,7 +644,7 @@ export function JobBoard() {
                               });
                             }}
                           >
-                            Cancel
+                            {t("common.cancel")}
                           </Button>
                           <Button
                             className="flex-1 bg-[#F7C876] hover:bg-[#EFA055]"
@@ -624,7 +657,9 @@ export function JobBoard() {
                             }
                           >
                             <Send className="h-4 w-4 mr-2" />
-                            {isSubmitting ? "Submitting..." : "Submit Quote"}
+                            {isSubmitting
+                              ? t("jobBoard.submitting")
+                              : t("jobBoard.submitQuote")}
                           </Button>
                         </div>
                       </div>
@@ -640,7 +675,7 @@ export function JobBoard() {
                       setShowDetailsSheet(true);
                     }}
                   >
-                    View Details
+                    {t("jobBoard.viewDetails")}
                   </Button>
                 </div>
               </div>
@@ -660,8 +695,11 @@ export function JobBoard() {
               {selectedJob?.title}
             </SheetTitle>
             <p className="text-sm text-gray-500">
-              Posted{" "}
-              {formatDate(selectedJob?.postedAt ?? selectedJob?.postedDate)}
+              {t("jobBoard.posted")}{" "}
+              {formatDate(
+                selectedJob?.postedAt ?? selectedJob?.postedDate,
+                i18n.language,
+              )}
               {selectedJob?.clientName ? ` • ${selectedJob.clientName}` : ""}
             </p>
           </SheetHeader>
@@ -673,22 +711,28 @@ export function JobBoard() {
               </Badge>
               {selectedJob?.urgency === "urgent" && (
                 <Badge className="bg-red-100 text-red-600 border-red-300">
-                  🔥 Urgent
+                  {t("jobBoard.urgentBadge")}
                 </Badge>
               )}
               <span className="text-sm text-gray-600">
-                Budget: ${selectedJob?.budget} (
-                {selectedJob?.budgetType === "fixed" ? "Fixed" : "Per hour"})
+                {t("jobBoard.budgetLabel")}: ${selectedJob?.budget} (
+                {selectedJob?.budgetType === "fixed"
+                  ? t("jobBoard.types.fixed")
+                  : t("jobBoard.perHour")}
+                )
               </span>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <MapPin className="h-4 w-4 shrink-0" />
-              {formatLocation(selectedJob?.location) || "Location not provided"}
+              {formatLocation(selectedJob?.location) ||
+                t("jobBoard.locationNotProvided")}
             </div>
 
             <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+              <h4 className="font-semibold text-gray-900 mb-2">
+                {t("jobBoard.description")}
+              </h4>
               <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed">
                 {selectedJob?.description}
               </p>
@@ -696,7 +740,9 @@ export function JobBoard() {
 
             {selectedJob?.photos && selectedJob.photos.length > 0 && (
               <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Photos</h4>
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  {t("jobBoard.photos")}
+                </h4>
                 <div className="grid grid-cols-2 gap-3">
                   {selectedJob.photos.map((photo, index) => (
                     <button
@@ -723,7 +769,9 @@ export function JobBoard() {
             {selectedJob?.providerQuote && (
               <div className="rounded-lg border border-[#F7C876]/40 bg-[#FDEFD6]/60 p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h4 className="font-semibold text-gray-900">Your Quote</h4>
+                  <h4 className="font-semibold text-gray-900">
+                    {t("jobBoard.yourQuote")}
+                  </h4>
                   {selectedJob.providerQuote.status && (
                     <Badge className="bg-white text-[#F1A400] border-[#F7C876]">
                       {selectedJob.providerQuote.status}
@@ -732,25 +780,36 @@ export function JobBoard() {
                 </div>
                 <div className="grid gap-2 text-sm text-gray-700">
                   <div>
-                    <span className="font-medium">Amount:</span>{" "}
+                    <span className="font-medium">
+                      {t("jobBoard.amount")}:{" "}
+                    </span>{" "}
                     {selectedJob.providerQuote.amount != null
                       ? `$${selectedJob.providerQuote.amount}`
-                      : "Not specified"}
+                      : t("jobBoard.notSpecified")}
                   </div>
                   <div>
-                    <span className="font-medium">Timeline:</span>{" "}
+                    <span className="font-medium">
+                      {t("jobBoard.timeline")}:{" "}
+                    </span>{" "}
                     {selectedJob.providerQuote.estimatedDuration ||
-                      "Not specified"}
+                      t("jobBoard.notSpecified")}
                   </div>
                   {selectedJob.providerQuote.createdAt && (
                     <div>
-                      <span className="font-medium">Submitted:</span>{" "}
-                      {formatDate(selectedJob.providerQuote.createdAt)}
+                      <span className="font-medium">
+                        {t("jobBoard.submitted")}:{" "}
+                      </span>{" "}
+                      {formatDate(
+                        selectedJob.providerQuote.createdAt,
+                        i18n.language,
+                      )}
                     </div>
                   )}
                   {selectedJob.providerQuote.message && (
                     <div>
-                      <span className="font-medium">Message:</span>
+                      <span className="font-medium">
+                        {t("jobBoard.message")}:{" "}
+                      </span>
                       <p className="mt-1 whitespace-pre-line">
                         {selectedJob.providerQuote.message}
                       </p>
@@ -771,7 +830,7 @@ export function JobBoard() {
                 }}
               >
                 <Send className="mr-2 h-4 w-4" />
-                Submit Quote
+                {t("jobBoard.submitQuote")}
               </Button>
             </div>
           )}
@@ -787,7 +846,7 @@ export function JobBoard() {
           {expandedPhoto && (
             <img
               src={expandedPhoto}
-              alt="Expanded photo"
+              alt={t("jobBoard.expandedPhotoAlt")}
               className="max-h-[85vh] w-full rounded object-contain"
             />
           )}
@@ -797,7 +856,7 @@ export function JobBoard() {
       {filteredJobs.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-gray-500">No jobs found in this category</p>
+            <p className="text-gray-500">{t("jobBoard.noJobsInCategory")}</p>
           </CardContent>
         </Card>
       )}

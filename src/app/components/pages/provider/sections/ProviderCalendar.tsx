@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "../../../ui/select";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
@@ -61,6 +62,7 @@ const timezoneOptions = [
 
 export const ProviderCalendar = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { availability, isLoading, error } = useProviderAvailability(user?.id);
   const [anchorDate] = useState<Date>(() => new Date());
   const [isSaving, setIsSaving] = useState(false);
@@ -244,14 +246,16 @@ export const ProviderCalendar = () => {
       if (error) {
         throw error;
       }
-      toast.success("Availability saved", {
-        description: "Your availability has been updated.",
+      toast.success(t("providerCalendar.saveSuccessTitle"), {
+        description: t("providerCalendar.saveSuccessDesc"),
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to save availability.";
+        error instanceof Error
+          ? error.message
+          : t("providerCalendar.savedError");
       setErrorMessage(message);
-      toast.error("Unable to save availability", {
+      toast.error(t("providerCalendar.saveErrorTitle"), {
         description: message,
       });
     } finally {
@@ -261,14 +265,14 @@ export const ProviderCalendar = () => {
 
   return (
     <div className="space-y-6 pt-6">
-      <PageHeader title="Availability" hideBack />
+      <PageHeader title={t("providerCalendar.title")} hideBack />
       <Card className="border border-gray-200/80 bg-white">
         <CardHeader className="bg-[#FDEFD6]/40">
           {/* <CardTitle className="tracking-tight">
             Availability Calendar
           </CardTitle> */}
           <CardDescription>
-            Manage a recurring weekly schedule or save a one-off week
+            {t("providerCalendar.weeklyScheduleDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -276,16 +280,14 @@ export const ProviderCalendar = () => {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-semibold text-gray-900">
-                  Availability for this week
+                  {t("providerCalendar.thisWeekTitle")}
                 </h3>
                 <p className="text-xs text-gray-500">
-                  Add one or more time ranges per day. Recurring mode saves a
-                  weekly pattern. Turning it off saves this week as
-                  date-specific overrides.
+                  {t("providerCalendar.thisWeekDesc")}
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span>Recurring</span>
+                <span>{t("providerCalendar.recurring")}</span>
                 <Switch
                   checked={settings.recurring}
                   onCheckedChange={(value) =>
@@ -346,7 +348,9 @@ export const ProviderCalendar = () => {
                             }
                           >
                             <SelectTrigger className="h-8 w-[110px]">
-                              <SelectValue placeholder="Start" />
+                              <SelectValue
+                                placeholder={t("providerCalendar.start")}
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               {timeOptions.map((option) => (
@@ -371,7 +375,9 @@ export const ProviderCalendar = () => {
                             }
                           >
                             <SelectTrigger className="h-8 w-[110px]">
-                              <SelectValue placeholder="End" />
+                              <SelectValue
+                                placeholder={t("providerCalendar.end")}
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               {timeOptions.map((option) => (
@@ -390,7 +396,7 @@ export const ProviderCalendar = () => {
                             className="text-xs text-red-500 hover:text-red-600"
                             onClick={() => removeRange(dateKey, index)}
                           >
-                            Remove
+                            {t("providerCalendar.removeSlot")}
                           </Button>
                         </div>
                       ))}
@@ -402,7 +408,7 @@ export const ProviderCalendar = () => {
 
             <div className="mt-4">
               <label className="text-xs font-medium text-gray-600">
-                Timezone
+                {t("providerCalendar.timezone")}
               </label>
               <select
                 className="mt-2 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
@@ -431,18 +437,17 @@ export const ProviderCalendar = () => {
                 {errorMessage ??
                   (error instanceof Error
                     ? error.message
-                    : "Unable to load availability.")}
+                    : t("providerCalendar.loadError"))}
               </div>
             )}
             {hasInvalidRanges && (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                Please select a valid start and end time for all availability
-                ranges before saving.
+                {t("providerCalendar.invalidRanges")}
               </div>
             )}
             {!hasAnyRanges && (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                Saving with no ranges will mark the visible days as unavailable.
+                {t("providerCalendar.noRangesWarning")}
               </div>
             )}
             <Button
@@ -450,7 +455,9 @@ export const ProviderCalendar = () => {
               onClick={handleSaveAvailability}
               disabled={isSaving || isLoading || hasInvalidRanges}
             >
-              {isSaving ? "Saving..." : "Save Availability"}
+              {isSaving
+                ? t("providerCalendar.saving")
+                : t("providerCalendar.saveAvailability")}
             </Button>
           </div>
         </CardContent>

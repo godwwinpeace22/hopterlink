@@ -3,6 +3,7 @@ import logo from "@/assets/logo.png";
 import {
   BarChart3,
   CheckCircle,
+  Globe,
   LayoutDashboard,
   LogOut,
   MessageSquareWarning,
@@ -30,6 +31,7 @@ import {
 const NAV_ITEMS = [
   { label: "Overview", path: "overview", icon: LayoutDashboard },
   { label: "Users", path: "users", icon: Users },
+  { label: "Allowed Countries", path: "countries", icon: Globe },
   { label: "Service Categories", path: "services", icon: Tag },
   { label: "Provider Verification", path: "verification", icon: CheckCircle },
   { label: "Disputes & Reports", path: "disputes", icon: MessageSquareWarning },

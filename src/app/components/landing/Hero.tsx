@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@/lib/router";
 import { Search, MapPin, Star, CheckCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const typedWords = [
   "Designers",
@@ -20,6 +21,7 @@ const popularSearches = [
 
 export function Hero() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [currentWord, setCurrentWord] = useState(0);
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,7 +71,7 @@ export function Hero() {
           {/* Left Content */}
           <div className="space-y-6">
             <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold leading-tight text-gray-900">
-              Connect with Nearby Top-rated Professional{" "}
+              {t("hero.headline")}{" "}
               <span className="inline-block min-w-[12ch] whitespace-nowrap bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent align-baseline">
                 {displayText}
                 <span className="animate-pulse">|</span>
@@ -77,8 +79,7 @@ export function Hero() {
             </h1>
 
             <p className="text-lg text-gray-600 max-w-lg">
-              We can connect you to the right Service, first time and every
-              time.
+              {t("hero.subheadline")}
             </p>
 
             {/* Search Form */}
@@ -90,7 +91,7 @@ export function Hero() {
                 <Search className="h-5 w-5 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search for Service"
+                  placeholder={t("hero.searchServicePlaceholder")}
                   className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder:text-gray-400"
                   value={searchService}
                   onChange={(e) => setSearchService(e.target.value)}
@@ -101,7 +102,7 @@ export function Hero() {
                 <MapPin className="h-5 w-5 text-gray-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Enter Location"
+                  placeholder={t("hero.searchLocationPlaceholder")}
                   className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder:text-gray-400"
                   value={searchLocation}
                   onChange={(e) => setSearchLocation(e.target.value)}
@@ -112,14 +113,14 @@ export function Hero() {
                 className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all whitespace-nowrap"
               >
                 <Search className="h-4 w-4" />
-                Search
+                {t("hero.searchButton")}
               </button>
             </form>
 
             {/* Popular Searches */}
             <div className="flex items-center flex-wrap gap-2">
               <span className="text-sm font-medium text-gray-700">
-                Popular Searches
+                {t("hero.popularSearches")}
               </span>
               {popularSearches.map((term) => (
                 <button
@@ -140,7 +141,9 @@ export function Hero() {
                 </div>
                 <div>
                   <p className="text-lg font-bold text-gray-900">215,292+</p>
-                  <p className="text-xs text-gray-500">Verified Providers</p>
+                  <p className="text-xs text-gray-500">
+                    {t("hero.verifiedProviders")}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -149,7 +152,9 @@ export function Hero() {
                 </div>
                 <div>
                   <p className="text-lg font-bold text-gray-900">90,000+</p>
-                  <p className="text-xs text-gray-500">Services Completed</p>
+                  <p className="text-xs text-gray-500">
+                    {t("hero.servicesCompleted")}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -158,7 +163,9 @@ export function Hero() {
                 </div>
                 <div>
                   <p className="text-lg font-bold text-gray-900">2,390,968</p>
-                  <p className="text-xs text-gray-500">Reviews Globally</p>
+                  <p className="text-xs text-gray-500">
+                    {t("hero.reviewsGlobally")}
+                  </p>
                 </div>
               </div>
             </div>

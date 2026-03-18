@@ -1,28 +1,29 @@
-const steps = [
-  {
-    number: "1",
-    title: "Post a Service",
-    description:
-      "After you post a job, our matching system identifies and alerts relevant Providers, who can then express interest in your job.",
-    icon: "/img/icons/work-01.svg",
-  },
-  {
-    number: "2",
-    title: "Getting Booked & Job Done",
-    description:
-      "After you post a job, our matching system identifies and alerts relevant Providers, who can then express interest in your job.",
-    icon: "/img/icons/work-01.svg",
-  },
-  {
-    number: "3",
-    title: "Get Reviewed & Get Leads",
-    description:
-      "After you post a job, our matching system identifies and alerts relevant Providers, who can then express interest in your job.",
-    icon: "/img/icons/work-03.svg",
-  },
-];
+import { useTranslation } from "react-i18next";
 
 export function HowItWorks() {
+  const { t } = useTranslation();
+
+  const steps = [
+    {
+      number: "1",
+      title: t("howItWorks.step1Title"),
+      description: t("howItWorks.step1Desc"),
+      icon: "/img/icons/work-01.svg",
+    },
+    {
+      number: "2",
+      title: t("howItWorks.step2Title"),
+      description: t("howItWorks.step2Desc"),
+      icon: "/img/icons/work-01.svg",
+    },
+    {
+      number: "3",
+      title: t("howItWorks.step3Title"),
+      description: t("howItWorks.step3Desc"),
+      icon: "/img/icons/work-03.svg",
+    },
+  ];
+
   return (
     <section className="py-16 lg:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,14 +39,13 @@ export function HowItWorks() {
           {/* Header */}
           <div className="text-center mb-14 relative z-10">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-              How Hopterlink{" "}
+              {t("howItWorks.title")}{" "}
               <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                Works
+                {t("howItWorks.titleHighlight")}
               </span>
             </h2>
             <p className="text-gray-400 max-w-md mx-auto">
-              Each listing is designed to be clear and concise, providing
-              customers with the best experience.
+              {t("howItWorks.subtitle")}
             </p>
           </div>
 

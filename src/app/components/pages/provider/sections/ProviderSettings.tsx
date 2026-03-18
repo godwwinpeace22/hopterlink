@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -88,6 +89,7 @@ const buildServiceMinimumHoursPayload = (
 export const ProviderSettings = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const hasInitialized = useRef(false);
   const { categoryNames } = useServiceCategories();
@@ -199,7 +201,7 @@ export const ProviderSettings = () => {
   const savePayoutSettingsMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) {
-        throw new Error("User not found.");
+        throw new Error(t("clientWallet.userNotFound"));
       }
 
       const existingWallet = normalizeProviderWalletMetadata(
@@ -239,11 +241,13 @@ export const ProviderSettings = () => {
       queryClient.invalidateQueries({
         queryKey: ["profile_metadata", user?.id],
       });
-      toast.success("Payout settings updated.");
+      toast.success(t("providerSettings.payoutUpdated"));
     },
     onError: (error) => {
       const message =
-        error instanceof Error ? error.message : "Unable to save settings.";
+        error instanceof Error
+          ? error.message
+          : t("providerSettings.saveSettingsFailed");
       toast.error(message);
     },
   });
@@ -251,12 +255,12 @@ export const ProviderSettings = () => {
   const savePricingSettingsMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) {
-        throw new Error("User not found.");
+        throw new Error(t("clientWallet.userNotFound"));
       }
 
       const services = selectedServices ? [selectedServices] : [];
       if (services.length === 0) {
-        throw new Error("Add at least one service to manage pricing.");
+        throw new Error(t("providerSettings.serviceRequired"));
       }
 
       const hourlyRateNumber = hourlyRate.trim() ? Number(hourlyRate) : null;
@@ -266,7 +270,7 @@ export const ProviderSettings = () => {
           hourlyRateNumber === null ||
           hourlyRateNumber <= 0)
       ) {
-        throw new Error("Hourly rate must be greater than zero.");
+        throw new Error(t("providerSettings.hourlyRateInvalid"));
       }
 
       const { error } = await supabase
@@ -301,33 +305,35 @@ export const ProviderSettings = () => {
       queryClient.invalidateQueries({
         queryKey: ["provider-profile", user?.id],
       });
-      toast.success("Pricing settings updated.");
+      toast.success(t("providerSettings.pricingUpdated"));
     },
     onError: (error) => {
       const message =
-        error instanceof Error ? error.message : "Unable to save pricing.";
+        error instanceof Error
+          ? error.message
+          : t("providerSettings.savePricingFailed");
       toast.error(message);
     },
   });
 
   const handleSavePayoutSettings = async () => {
     if (!bankAccount.accountName.trim() || !bankAccount.bankName.trim()) {
-      toast.error("Account name and bank name are required.");
+      toast.error(t("providerSettings.accountAndBankRequired"));
       return;
     }
 
     if (bankAccount.institutionNumber.trim().length !== 3) {
-      toast.error("Institution number must be exactly 3 digits.");
+      toast.error(t("providerSettings.institutionInvalid"));
       return;
     }
 
     if (bankAccount.transitNumber.trim().length !== 5) {
-      toast.error("Transit number must be exactly 5 digits.");
+      toast.error(t("providerSettings.transitInvalid"));
       return;
     }
 
     if (bankAccount.accountNumber.trim().length < 7) {
-      toast.error("Account number must be at least 7 digits.");
+      toast.error(t("providerSettings.accountInvalid"));
       return;
     }
 
@@ -350,39 +356,50 @@ export const ProviderSettings = () => {
 
   return (
     <div className="space-y-6 pt-6">
-      <PageHeader title="Settings" hideBack />
+      <PageHeader title={t("providerSettings.title")} hideBack />
       <Tabs defaultValue="pricing" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="pricing">Pricing</TabsTrigger>
-          <TabsTrigger value="payout">Payout</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="pricing">
+            {t("providerSettings.tabPricing")}
+          </TabsTrigger>
+          <TabsTrigger value="payout">
+            {t("providerSettings.tabPayout")}
+          </TabsTrigger>
+          <TabsTrigger value="notifications">
+            {t("providerSettings.tabNotifications")}
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            {t("providerSettings.tabSecurity")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pricing">
           <Card>
             <CardHeader>
-              <CardTitle>Business & Pricing</CardTitle>
+              <CardTitle>{t("providerSettings.pricingCardTitle")}</CardTitle>
               <CardDescription>
-                Set your hourly rate and optional minimum billable hours for
-                each listed service.
+                {t("providerSettings.pricingCardDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="business-name">Business name</Label>
+                  <Label htmlFor="business-name">
+                    {t("providerSettings.businessNameLabel")}
+                  </Label>
                   <Input
                     id="business-name"
                     className="max-w-xl"
                     value={businessName}
                     onChange={(event) => setBusinessName(event.target.value)}
-                    placeholder="Business or provider name"
+                    placeholder={t("providerSettings.businessNamePlaceholder")}
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="hourly-rate">Hourly rate (CAD)</Label>
+                  <Label htmlFor="hourly-rate">
+                    {t("providerSettings.hourlyRateLabel")}
+                  </Label>
                   <Input
                     id="hourly-rate"
                     type="number"
@@ -396,13 +413,17 @@ export const ProviderSettings = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="service">Service</Label>
+                  <Label htmlFor="service">
+                    {t("providerSettings.serviceLabel")}
+                  </Label>
                   <Select
                     value={selectedServices}
                     onValueChange={toggleService}
                   >
                     <SelectTrigger id="service" className="max-w-xl">
-                      <SelectValue placeholder="Select a service" />
+                      <SelectValue
+                        placeholder={t("providerSettings.servicePlaceholder")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {categoryNames.map((service) => (
@@ -414,19 +435,21 @@ export const ProviderSettings = () => {
                   </Select>
                   {!selectedServices && (
                     <p className="text-xs text-muted-foreground">
-                      Select a service to continue.
+                      {t("providerSettings.serviceContinue")}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="business-bio">Business bio</Label>
+                  <Label htmlFor="business-bio">
+                    {t("providerSettings.businessBioLabel")}
+                  </Label>
                   <Textarea
                     id="business-bio"
                     className="max-w-xl"
                     value={bio}
                     onChange={(event) => setBio(event.target.value)}
-                    placeholder="Tell clients about your experience and what you offer."
+                    placeholder={t("providerSettings.businessBioPlaceholder")}
                     rows={5}
                   />
                 </div>
@@ -434,15 +457,17 @@ export const ProviderSettings = () => {
 
               <div className="space-y-4 rounded-lg border p-4">
                 <div>
-                  <p className="font-medium">Minimum billable hours</p>
+                  <p className="font-medium">
+                    {t("providerSettings.minimumHoursTitle")}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Leave a service blank if you do not want a minimum.
+                    {t("providerSettings.minimumHoursDesc")}
                   </p>
                 </div>
 
                 {!selectedServices ? (
                   <p className="text-sm text-muted-foreground">
-                    Select a service above to configure minimum billable hours.
+                    {t("providerSettings.minimumHoursSelect")}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -460,7 +485,9 @@ export const ProviderSettings = () => {
                           [selectedServices]: event.target.value,
                         }))
                       }
-                      placeholder="Optional minimum hours"
+                      placeholder={t(
+                        "providerSettings.minimumHoursPlaceholder",
+                      )}
                     />
                   </div>
                 )}
@@ -470,7 +497,9 @@ export const ProviderSettings = () => {
                 onClick={handleSavePricingSettings}
                 disabled={isSavingPricing}
               >
-                {isSavingPricing ? "Saving..." : "Save pricing settings"}
+                {isSavingPricing
+                  ? t("providerSettings.savingProfile")
+                  : t("providerSettings.savePricingSettings")}
               </Button>
             </CardContent>
           </Card>
@@ -479,10 +508,11 @@ export const ProviderSettings = () => {
         <TabsContent value="payout">
           <Card>
             <CardHeader>
-              <CardTitle>Payout & Bank Account</CardTitle>
+              <CardTitle>{t("providerSettings.payoutCardTitle")}</CardTitle>
               <CardDescription>
-                Save payout details for manual processing. Auto-withdrawal
-                creates requests every {WALLET_CONFIG.payoutDayLabel}.
+                {t("providerSettings.payoutCardDesc", {
+                  day: WALLET_CONFIG.payoutDayLabel,
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -503,7 +533,9 @@ export const ProviderSettings = () => {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="bank-account-name">Account name</Label>
+                  <Label htmlFor="bank-account-name">
+                    {t("providerSettings.accountNameLabel")}
+                  </Label>
                   <Input
                     id="bank-account-name"
                     className="max-w-4xl"
@@ -511,11 +543,13 @@ export const ProviderSettings = () => {
                     onChange={(event) =>
                       updateBankField("accountName", event.target.value)
                     }
-                    placeholder="Business or personal account name"
+                    placeholder={t("providerSettings.accountNamePlaceholder")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bank-name">Bank name</Label>
+                  <Label htmlFor="bank-name">
+                    {t("providerSettings.bankNameLabel")}
+                  </Label>
                   <Input
                     id="bank-name"
                     className="max-w-4xl"
@@ -523,12 +557,12 @@ export const ProviderSettings = () => {
                     onChange={(event) =>
                       updateBankField("bankName", event.target.value)
                     }
-                    placeholder="Bank name"
+                    placeholder={t("providerSettings.bankNamePlaceholder")}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bank-institution-number">
-                    Institution number (3 digits)
+                    {t("providerSettings.institutionNumberLabel")}
                   </Label>
                   <Input
                     id="bank-institution-number"
@@ -546,7 +580,7 @@ export const ProviderSettings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bank-transit-number">
-                    Transit number (5 digits)
+                    {t("providerSettings.transitNumberLabel")}
                   </Label>
                   <Input
                     id="bank-transit-number"
@@ -563,7 +597,9 @@ export const ProviderSettings = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bank-account-number">Account number</Label>
+                  <Label htmlFor="bank-account-number">
+                    {t("providerSettings.accountNumberLabel")}
+                  </Label>
                   <Input
                     id="bank-account-number"
                     className="max-w-4xl"
@@ -578,7 +614,9 @@ export const ProviderSettings = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bank-country">Country code</Label>
+                  <Label htmlFor="bank-country">
+                    {t("providerSettings.countryCodeLabel")}
+                  </Label>
                   <Input
                     id="bank-country"
                     className="max-w-4xl"
@@ -595,7 +633,9 @@ export const ProviderSettings = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bank-currency">Currency</Label>
+                  <Label htmlFor="bank-currency">
+                    {t("providerSettings.currencyLabel")}
+                  </Label>
                   <Input
                     id="bank-currency"
                     className="max-w-4xl"
@@ -615,10 +655,14 @@ export const ProviderSettings = () => {
 
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
                 <div>
-                  <p className="font-medium">Enable auto-withdrawal</p>
+                  <p className="font-medium">
+                    {t("providerSettings.autoWithdrawalTitle")}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Auto requests are created every{" "}
-                    {WALLET_CONFIG.payoutDayLabel} in {WALLET_CONFIG.timezone}.
+                    {t("providerSettings.autoWithdrawalDesc", {
+                      day: WALLET_CONFIG.payoutDayLabel,
+                      timezone: WALLET_CONFIG.timezone,
+                    })}
                   </p>
                 </div>
                 <Switch
@@ -631,7 +675,9 @@ export const ProviderSettings = () => {
                 onClick={handleSavePayoutSettings}
                 disabled={isSavingPayout}
               >
-                {isSavingPayout ? "Saving..." : "Save payout settings"}
+                {isSavingPayout
+                  ? t("providerSettings.savingProfile")
+                  : t("providerSettings.savePayoutSettings")}
               </Button>
             </CardContent>
           </Card>
@@ -640,23 +686,23 @@ export const ProviderSettings = () => {
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
-              <CardTitle>Notifications</CardTitle>
+              <CardTitle>{t("providerSettings.tabNotifications")}</CardTitle>
               <CardDescription>
-                Manage how you receive account and booking updates.
+                {t("providerSettings.notificationsCardDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span>New Job Requests</span>
+                  <span>{t("providerSettings.notifNewJobs")}</span>
                   <Switch defaultChecked />
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Messages</span>
+                  <span>{t("providerSettings.notifMessages")}</span>
                   <Switch defaultChecked />
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Payment Updates</span>
+                  <span>{t("providerSettings.notifPaymentUpdates")}</span>
                   <Switch defaultChecked />
                 </div>
               </div>
@@ -667,26 +713,26 @@ export const ProviderSettings = () => {
         <TabsContent value="security">
           <Card>
             <CardHeader>
-              <CardTitle>Change Password</CardTitle>
+              <CardTitle>{t("providerSettings.securityCardTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <Input
                   type="password"
                   className="max-w-4xl"
-                  placeholder="Current password"
+                  placeholder={t("providerSettings.currentPasswordPlaceholder")}
                 />
                 <Input
                   type="password"
                   className="max-w-4xl"
-                  placeholder="New password"
+                  placeholder={t("providerSettings.newPasswordPlaceholder")}
                 />
                 <Input
                   type="password"
                   className="max-w-4xl"
-                  placeholder="Confirm new password"
+                  placeholder={t("providerSettings.confirmPasswordPlaceholder")}
                 />
-                <Button>Update Password</Button>
+                <Button>{t("providerSettings.updatePasswordButton")}</Button>
               </div>
             </CardContent>
           </Card>

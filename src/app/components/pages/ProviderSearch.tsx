@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -40,6 +41,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
 import { useServiceCategories } from "@/lib/useServiceCategories";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProviderSearchProps {}
 
@@ -61,6 +63,7 @@ type Provider = {
   id: string;
   name: string;
   businessName: string;
+  country: string | null;
   rating: number;
   totalReviews: number;
   completedJobs: number;
@@ -77,7 +80,10 @@ type Provider = {
 
 export function ProviderSearch({}: ProviderSearchProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { profile } = useAuth();
   const { categoryNamesWithAll, ALL_SERVICES_LABEL } = useServiceCategories();
+  const userCountry = profile?.country ?? null;
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(ALL_SERVICES_LABEL);
@@ -92,7 +98,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
     data: rawResult,
     isLoading,
     error,
-  } = useSupabaseQuery(["provider_profiles_search"], () =>
+  } = useSupabaseQuery(["provider_profiles_search", userCountry], () =>
     supabase
       .from("provider_profiles")
       .select(
@@ -110,7 +116,8 @@ export function ProviderSearch({}: ProviderSearchProps) {
           availability,
           profile:profiles!provider_profiles_user_id_fkey (
             full_name,
-            avatar_url
+            avatar_url,
+            country
           )
         `,
       )
@@ -132,9 +139,11 @@ export function ProviderSearch({}: ProviderSearchProps) {
 
       return {
         id: provider.user_id,
-        name: profile?.full_name ?? "Service Provider",
+        name: profile?.full_name ?? t("providerSearch.providerDefault"),
         businessName:
-          provider.business_name ?? profile?.full_name ?? "Service Provider",
+          provider.business_name ??
+          profile?.full_name ??
+          t("providerSearch.providerDefault"),
         rating: provider.rating ?? 0,
         totalReviews: provider.total_reviews ?? 0,
         completedJobs: provider.jobs_completed ?? 0,
@@ -142,18 +151,31 @@ export function ProviderSearch({}: ProviderSearchProps) {
         avatar: profile?.avatar_url ?? "",
         services: provider.services ?? [],
         serviceArea,
-        responseTime: "< 2 hours",
+        responseTime: t("providerSearch.responseTimeDefault"),
         verified: provider.verification_status === "approved",
         available: availabilityKeys.length > 0,
         bio: provider.bio ?? "",
         nextAvailable,
+        country:
+          profile && typeof profile.country === "string"
+            ? profile.country
+            : null,
       };
     });
-  }, [rawResult?.data]);
+  }, [rawResult?.data, t]);
 
   const filteredProviders = useMemo(
     () =>
       providers.filter((provider) => {
+        const matchesCountry =
+          typeof userCountry === "string" &&
+          userCountry.length > 0 &&
+          provider.country === userCountry;
+
+        if (!matchesCountry) {
+          return false;
+        }
+
         const matchesSearch =
           searchQuery === "" ||
           provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -163,6 +185,10 @@ export function ProviderSearch({}: ProviderSearchProps) {
           provider.services.some((s) =>
             s.toLowerCase().includes(searchQuery.toLowerCase()),
           );
+
+        const matchesLocation =
+          location === "" ||
+          provider.serviceArea.toLowerCase().includes(location.toLowerCase());
 
         const matchesCategory =
           selectedCategory === ALL_SERVICES_LABEL ||
@@ -177,6 +203,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
 
         return (
           matchesSearch &&
+          matchesLocation &&
           matchesCategory &&
           matchesRating &&
           matchesRate &&
@@ -184,7 +211,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
           matchesVerified
         );
       }),
-    [providers, searchQuery, selectedCategory, filters],
+    [providers, searchQuery, location, selectedCategory, filters, userCountry],
   );
 
   const renderSkeletonCard = () => (
@@ -256,14 +283,14 @@ export function ProviderSearch({}: ProviderSearchProps) {
               <div className="flex items-center gap-2 flex-shrink-0">
                 {provider.available ? (
                   <Badge className="bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/10 text-xs">
-                    Available Now
+                    {t("providerSearch.availableNow")}
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
                     className="text-xs text-muted-foreground"
                   >
-                    Unavailable
+                    {t("providerSearch.unavailable")}
                   </Badge>
                 )}
               </div>
@@ -287,7 +314,9 @@ export function ProviderSearch({}: ProviderSearchProps) {
                   />
                 ))}
                 <span className="ml-1 text-sm font-semibold text-foreground">
-                  {provider.rating > 0 ? provider.rating.toFixed(1) : "New"}
+                  {provider.rating > 0
+                    ? provider.rating.toFixed(1)
+                    : t("providerSearch.newLabel")}
                 </span>
                 {provider.totalReviews > 0 && (
                   <span className="text-xs text-muted-foreground">
@@ -298,7 +327,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
               <span className="text-muted-foreground/40 text-xs">•</span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Briefcase className="h-3 w-3" />
-                {provider.completedJobs} jobs
+                {provider.completedJobs} {t("providerSearch.jobs")}
               </span>
               <span className="text-muted-foreground/40 text-xs">•</span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -323,7 +352,9 @@ export function ProviderSearch({}: ProviderSearchProps) {
                   variant="outline"
                   className="text-xs px-2 py-0.5 text-muted-foreground"
                 >
-                  +{provider.services.length - 4} more
+                  {t("providerSearch.moreServices", {
+                    count: provider.services.length - 4,
+                  })}
                 </Badge>
               )}
             </div>
@@ -352,7 +383,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 }
                 className="flex-1 sm:flex-none"
               >
-                Book Now
+                {t("providerSearch.bookNow")}
               </Button>
               <Button
                 size="sm"
@@ -364,7 +395,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 }
                 className="flex-1 sm:flex-none"
               >
-                View Profile
+                {t("providerSearch.viewProfile")}
               </Button>
               <Button
                 size="sm"
@@ -379,7 +410,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 }
                 className="flex-1 sm:flex-none text-primary hover:text-primary hover:bg-primary/10"
               >
-                Message
+                {t("providerSearch.message")}
               </Button>
             </div>
           </div>
@@ -401,27 +432,40 @@ export function ProviderSearch({}: ProviderSearchProps) {
       <div className="border-b -mx-6 -mt-8 lg:-mx-8 px-6 lg:px-8 py-10 bg-gradient-to-b from-primary/5 to-transparent">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Find Local Service Providers
+            {t("providerSearch.title")}
           </h1>
         </div>
         <p className="text-muted-foreground mb-6">
           {isLoading
-            ? "Loading verified professionals near you..."
-            : `${providers.length} verified professionals available in your area`}
+            ? t("providerSearch.loadingHero")
+            : t("providerSearch.availableCount", {
+                count: filteredProviders.length,
+              })}
         </p>
+
+        {userCountry && (
+          <p className="text-xs text-muted-foreground mb-4">
+            {t("providerSearch.countryRestricted", { country: userCountry })}
+          </p>
+        )}
 
         {/* Stats row */}
         <div className="flex flex-wrap gap-4 mb-6">
           {[
             {
               icon: <Users className="h-4 w-4" />,
-              label: `${providers.length} Providers`,
+              label: t("providerSearch.statsProviders", {
+                count: providers.length,
+              }),
             },
             {
               icon: <CheckCircle className="h-4 w-4" />,
-              label: "All Verified",
+              label: t("providerSearch.statsVerified"),
             },
-            { icon: <TrendingUp className="h-4 w-4" />, label: "Top Rated" },
+            {
+              icon: <TrendingUp className="h-4 w-4" />,
+              label: t("providerSearch.statsTopRated"),
+            },
           ].map(({ icon, label }) => (
             <div
               key={label}
@@ -441,7 +485,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search services or providers..."
+                    placeholder={t("providerSearch.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -452,7 +496,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Location"
+                    placeholder={t("providerSearch.locationPlaceholder")}
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     className="pl-10"
@@ -462,7 +506,9 @@ export function ProviderSearch({}: ProviderSearchProps) {
               <div className="md:col-span-3">
                 <Button className="w-full" disabled={isLoading}>
                   <Search className="h-4 w-4 mr-2" />
-                  {isLoading ? "Searching..." : "Search"}
+                  {isLoading
+                    ? t("providerSearch.searching")
+                    : t("providerSearch.search")}
                 </Button>
               </div>
             </div>
@@ -475,7 +521,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
         {/* Category pills */}
         <div className="mb-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Browse by Category
+            {t("providerSearch.browseByCategory")}
           </h2>
           <div className="flex flex-wrap gap-2">
             {categoryNamesWithAll.map((category) => {
@@ -507,7 +553,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 <CardTitle className="flex items-center justify-between text-base">
                   <span className="flex items-center gap-2">
                     <SlidersHorizontal className="h-4 w-4" />
-                    Filters
+                    {t("providerSearch.filters")}
                   </span>
                   {activeFilterCount > 0 && (
                     <Badge className="h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
@@ -520,7 +566,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
               <CardContent className="space-y-5 pt-0">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground">
-                    Minimum Rating
+                    {t("providerSearch.minRating")}
                   </label>
                   <Select
                     value={String(filters.minRating)}
@@ -529,13 +575,23 @@ export function ProviderSearch({}: ProviderSearchProps) {
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Any Rating" />
+                      <SelectValue
+                        placeholder={t("providerSearch.anyRating")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">Any Rating</SelectItem>
-                      <SelectItem value="4">4+ Stars</SelectItem>
-                      <SelectItem value="4.5">4.5+ Stars</SelectItem>
-                      <SelectItem value="4.8">4.8+ Stars</SelectItem>
+                      <SelectItem value="0">
+                        {t("providerSearch.anyRating")}
+                      </SelectItem>
+                      <SelectItem value="4">
+                        {t("providerSearch.stars4")}
+                      </SelectItem>
+                      <SelectItem value="4.5">
+                        {t("providerSearch.stars45")}
+                      </SelectItem>
+                      <SelectItem value="4.8">
+                        {t("providerSearch.stars48")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -544,7 +600,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-foreground">
-                    Max Hourly Rate
+                    {t("providerSearch.maxRate")}
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -562,7 +618,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                     />
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Up to ${filters.maxRate}/hr
+                    {t("providerSearch.upToRate", { rate: filters.maxRate })}
                   </p>
                 </div>
 
@@ -571,10 +627,10 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      Available Now
+                      {t("providerSearch.availableNow")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Show only online
+                      {t("providerSearch.showOnlyOnline")}
                     </p>
                   </div>
                   <Switch
@@ -588,10 +644,10 @@ export function ProviderSearch({}: ProviderSearchProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      Verified Only
+                      {t("providerSearch.verifiedOnly")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Background checked
+                      {t("providerSearch.backgroundChecked")}
                     </p>
                   </div>
                   <Switch
@@ -618,7 +674,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                         })
                       }
                     >
-                      Clear Filters
+                      {t("providerSearch.clearFilters")}
                     </Button>
                   </>
                 )}
@@ -634,13 +690,9 @@ export function ProviderSearch({}: ProviderSearchProps) {
                   {isLoading ? (
                     <Skeleton className="h-6 w-40 inline-block" />
                   ) : (
-                    <>
-                      {filteredProviders.length}{" "}
-                      <span className="font-normal text-muted-foreground text-base">
-                        provider{filteredProviders.length !== 1 ? "s" : ""}{" "}
-                        found
-                      </span>
-                    </>
+                    t("providerSearch.found", {
+                      count: filteredProviders.length,
+                    })
                   )}
                 </h2>
                 {/* <p className="text-sm text-muted-foreground mt-0.5">
@@ -652,7 +704,13 @@ export function ProviderSearch({}: ProviderSearchProps) {
             {error && (
               <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {(error as { message?: string }).message ??
-                  "Failed to load providers."}
+                  t("providerSearch.failedLoad")}
+              </div>
+            )}
+
+            {!userCountry && (
+              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                {t("providerSearch.countryRequiredNotice")}
               </div>
             )}
 
@@ -669,11 +727,10 @@ export function ProviderSearch({}: ProviderSearchProps) {
                     <Search className="h-7 w-7 text-muted-foreground" />
                   </div>
                   <h3 className="mb-1 text-lg font-semibold text-foreground">
-                    No providers found
+                    {t("providerSearch.noProvidersTitle")}
                   </h3>
                   <p className="mb-5 text-sm text-muted-foreground max-w-xs mx-auto">
-                    Try broadening your search or adjusting your filters to see
-                    more results.
+                    {t("providerSearch.noProvidersSubtitle")}
                   </p>
                   <Button
                     variant="outline"
@@ -689,7 +746,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                       });
                     }}
                   >
-                    Clear All Filters
+                    {t("providerSearch.clearAllFilters")}
                   </Button>
                 </CardContent>
               </Card>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "@/lib/router";
 // import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
 
 export const ProviderJobs = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("opportunities");
   const [opportunitiesFilter, setOpportunitiesFilter] = useState<
@@ -85,8 +87,8 @@ export const ProviderJobs = () => {
           id: booking.id,
           jobId: booking.job_id ?? null,
           clientId: client?.id ?? "",
-          client: client?.full_name ?? "Client",
-          service: booking.service_type ?? "Service",
+          client: client?.full_name ?? t("providerJobs.client"),
+          service: booking.service_type ?? t("providerJobs.service"),
           date: scheduledDate ? scheduledDate.toLocaleDateString() : "",
           time: scheduledDate
             ? scheduledDate.toLocaleTimeString([], {
@@ -129,8 +131,8 @@ export const ProviderJobs = () => {
           id: booking.id,
           jobId: booking.job_id ?? null,
           clientId: client?.id ?? "",
-          client: client?.full_name ?? "Client",
-          service: booking.service_type ?? "Service",
+          client: client?.full_name ?? t("providerJobs.client"),
+          service: booking.service_type ?? t("providerJobs.service"),
           date: scheduledDate ? scheduledDate.toLocaleDateString() : "",
           time: scheduledDate
             ? scheduledDate.toLocaleTimeString([], {
@@ -202,15 +204,15 @@ export const ProviderJobs = () => {
       return {
         id: quote.id,
         jobId: job?.id ?? "",
-        jobTitle: job?.title ?? "Job",
+        jobTitle: job?.title ?? t("providerJobs.title"),
         category: job?.category ?? "",
         clientId: client?.id ?? "",
-        clientName: client?.full_name ?? "Client",
+        clientName: client?.full_name ?? t("providerJobs.client"),
         status: quote.status ?? "pending",
         bookingId: booking?.id ?? null,
         bookingStatus: booking?.status ?? null,
         amount: quote.amount ?? 0,
-        timeline: quote.estimated_duration ?? "Flexible",
+        timeline: quote.estimated_duration ?? t("providerJobs.flexible"),
         message: quote.message ?? "",
         createdAt: quote.created_at
           ? new Date(quote.created_at).toLocaleDateString()
@@ -219,7 +221,7 @@ export const ProviderJobs = () => {
         location: getLocationLabel(job?.location),
       };
     });
-  }, [quotesResult]);
+  }, [quotesResult, t]);
 
   const resolveBookingId = async (quoteId: string) => {
     let query = supabase
@@ -305,7 +307,7 @@ export const ProviderJobs = () => {
 
   return (
     <div className="space-y-6 pt-6">
-      <PageHeader title="My Jobs" hideBack />
+      <PageHeader title={t("providerJobs.title")} hideBack />
       <Card className="border border-gray-200/80 bg-white">
         <CardContent className="pt-6">
           <Tabs
@@ -314,10 +316,18 @@ export const ProviderJobs = () => {
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-4 bg-[#FDEFD6]/60">
-              <TabsTrigger value="opportunities">Requests & Quotes</TabsTrigger>
-              <TabsTrigger value="upcoming">Accepted</TabsTrigger>
-              <TabsTrigger value="in-progress">In Progress</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="opportunities">
+                {t("providerJobs.tabRequestsQuotes")}
+              </TabsTrigger>
+              <TabsTrigger value="upcoming">
+                {t("providerJobs.tabAccepted")}
+              </TabsTrigger>
+              <TabsTrigger value="in-progress">
+                {t("providerJobs.tabInProgress")}
+              </TabsTrigger>
+              <TabsTrigger value="completed">
+                {t("providerJobs.tabCompleted")}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="opportunities" className="space-y-6 mt-6">
@@ -335,7 +345,7 @@ export const ProviderJobs = () => {
                   }
                   onClick={() => setOpportunitiesFilter("requests")}
                 >
-                  Requests
+                  {t("providerJobs.subtabRequests")}
                 </Button>
                 <Button
                   type="button"
@@ -350,7 +360,7 @@ export const ProviderJobs = () => {
                   }
                   onClick={() => setOpportunitiesFilter("quotes")}
                 >
-                  Quotes
+                  {t("providerJobs.subtabQuotesShort")}
                 </Button>
               </div>
 
@@ -358,7 +368,7 @@ export const ProviderJobs = () => {
                 pendingBookings.length === 0 ? (
                   <Card className="border border-dashed border-[#F7C876]/60 bg-[#FDEFD6]/30">
                     <CardContent className="py-10 text-center text-gray-600">
-                      No pending booking requests.
+                      {t("providerJobs.noPendingBookingRequests")}
                     </CardContent>
                   </Card>
                 ) : (
@@ -375,12 +385,12 @@ export const ProviderJobs = () => {
                                 {booking.service}
                               </h3>
                               <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-[#FDEFD6] text-[#F1A400] border-[#F7C876]">
-                                Pending
+                                {t("providerJobs.statusPending")}
                               </span>
                             </div>
                             <div className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-600">
                               <span>
-                                <strong>Client:</strong>{" "}
+                                <strong>{t("providerJobs.client")}:</strong>{" "}
                                 {booking.clientId ? (
                                   <Link
                                     to={`/dashboard/provider/profile/${booking.clientId}`}
@@ -394,7 +404,7 @@ export const ProviderJobs = () => {
                               </span>
                               <span className="inline-flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-gray-400" />
-                                {booking.date} at {booking.time}
+                                {booking.date} {t("common.at")} {booking.time}
                               </span>
                               <span className="inline-flex items-center gap-2">
                                 <MapPin className="h-4 w-4 text-gray-400" />
@@ -405,7 +415,7 @@ export const ProviderJobs = () => {
                               {booking.description}
                             </p>
                             <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#FDEFD6] px-3 py-1 text-sm font-semibold text-[#F1A400]">
-                              Price: ${booking.price}
+                              {t("providerJobs.price")}: ${booking.price}
                             </div>
                           </div>
                           <div className="flex flex-col gap-2">
@@ -414,7 +424,7 @@ export const ProviderJobs = () => {
                               className="bg-[#F7C876] hover:bg-[#EFA055]"
                               onClick={() => handleAcceptBooking(booking.id)}
                             >
-                              Accept Booking
+                              {t("providerJobs.acceptBooking")}
                             </Button>
                             <Button
                               size="sm"
@@ -422,7 +432,7 @@ export const ProviderJobs = () => {
                               className="text-red-600 border-red-200 hover:bg-red-50"
                               onClick={() => handleDeclineBooking(booking.id)}
                             >
-                              Decline
+                              {t("providerJobs.declineJob")}
                             </Button>
                           </div>
                         </div>
@@ -433,7 +443,7 @@ export const ProviderJobs = () => {
               ) : providerQuotes.length === 0 ? (
                 <Card className="border border-dashed border-[#F7C876]/60 bg-[#FDEFD6]/30">
                   <CardContent className="py-10 text-center text-gray-600">
-                    No submitted quotes yet.
+                    {t("providerJobs.noSubmittedQuotes")}
                   </CardContent>
                 </Card>
               ) : (
@@ -449,14 +459,14 @@ export const ProviderJobs = () => {
                           : (quote.status?.replace("_", " ") ?? "pending");
                   const statusLabel =
                     normalizedStatus === "in progress"
-                      ? "In Progress"
+                      ? t("providerJobs.statusInProgress")
                       : normalizedStatus === "completed"
-                        ? "Completed"
+                        ? t("providerJobs.statusCompleted")
                         : normalizedStatus === "accepted"
-                          ? "Accepted"
+                          ? t("providerJobs.statusAccepted")
                           : normalizedStatus === "rejected"
-                            ? "Rejected"
-                            : "Pending";
+                            ? t("providerJobs.statusRejected")
+                            : t("providerJobs.statusPending");
                   const statusClass =
                     normalizedStatus === "completed"
                       ? "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 border-green-200"
@@ -494,7 +504,7 @@ export const ProviderJobs = () => {
                             </div>
                             <div className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-600">
                               <span>
-                                <strong>Client:</strong>{" "}
+                                <strong>{t("providerJobs.client")}:</strong>{" "}
                                 {quote.clientId ? (
                                   <Link
                                     to={`/dashboard/provider/profile/${quote.clientId}`}
@@ -508,7 +518,9 @@ export const ProviderJobs = () => {
                               </span>
                               <span className="inline-flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-gray-400" />
-                                Submitted {quote.createdAt}
+                                {t("providerJobs.submittedOn", {
+                                  date: quote.createdAt,
+                                })}
                               </span>
                               {quote.location && (
                                 <span className="inline-flex items-center gap-2">
@@ -524,11 +536,11 @@ export const ProviderJobs = () => {
                             )}
                             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                               <span className="inline-flex items-center rounded-full bg-[#FDEFD6] px-3 py-1 text-sm font-semibold text-[#F1A400]">
-                                Quote: ${quote.amount}
+                                {t("providerJobs.quote")}: ${quote.amount}
                               </span>
                               {quote.budget && (
                                 <span className="inline-flex items-center rounded-full bg-[#FFF7E8] px-3 py-1 text-sm font-semibold text-[#A15C00]">
-                                  Budget: ${quote.budget}
+                                  {t("providerJobs.budget")}: ${quote.budget}
                                 </span>
                               )}
                               <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
@@ -543,7 +555,7 @@ export const ProviderJobs = () => {
                                 className="bg-[#F7C876] hover:bg-[#EFA055]"
                                 onClick={() => handleStartFromQuote(quote)}
                               >
-                                Start Job
+                                {t("providerJobs.startJob")}
                               </Button>
                             )}
                             {canComplete && (
@@ -553,7 +565,7 @@ export const ProviderJobs = () => {
                                 onClick={() => handleCompleteFromQuote(quote)}
                               >
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                Mark Complete
+                                {t("providerJobs.markComplete")}
                               </Button>
                             )}
                             {canMessage && (
@@ -577,7 +589,7 @@ export const ProviderJobs = () => {
                                   })
                                 }
                               >
-                                Message Client
+                                {t("providerJobs.messageClient")}
                               </Button>
                             )}
                           </div>
@@ -609,11 +621,12 @@ export const ProviderJobs = () => {
                   {statusJobs.length === 0 ? (
                     <Card className="border border-dashed border-[#F7C876]/60 bg-[#FDEFD6]/30">
                       <CardContent className="py-10 text-center text-gray-600">
-                        No{" "}
-                        {status === "upcoming"
-                          ? "accepted"
-                          : status.replace("-", " ")}{" "}
-                        jobs yet.
+                        {t("providerJobs.noStatusJobsYet", {
+                          status:
+                            status === "upcoming"
+                              ? t("providerJobs.statusAccepted").toLowerCase()
+                              : status.replace("-", " "),
+                        })}
                       </CardContent>
                     </Card>
                   ) : (
@@ -633,15 +646,15 @@ export const ProviderJobs = () => {
                                   className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusBadgeClass}`}
                                 >
                                   {status === "upcoming"
-                                    ? "Accepted"
+                                    ? t("providerJobs.statusAccepted")
                                     : status === "in-progress"
-                                      ? "In Progress"
-                                      : "Completed"}
+                                      ? t("providerJobs.statusInProgress")
+                                      : t("providerJobs.statusCompleted")}
                                 </span>
                               </div>
                               <div className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-600">
                                 <span>
-                                  <strong>Client:</strong>{" "}
+                                  <strong>{t("providerJobs.client")}:</strong>{" "}
                                   {job.clientId ? (
                                     <Link
                                       to={`/dashboard/provider/profile/${job.clientId}`}
@@ -655,7 +668,7 @@ export const ProviderJobs = () => {
                                 </span>
                                 <span className="inline-flex items-center gap-2">
                                   <Clock className="h-4 w-4 text-gray-400" />
-                                  {job.date} at {job.time}
+                                  {job.date} {t("common.at")} {job.time}
                                 </span>
                                 <span className="inline-flex items-center gap-2">
                                   <MapPin className="h-4 w-4 text-gray-400" />
@@ -666,7 +679,7 @@ export const ProviderJobs = () => {
                                 {job.description}
                               </p>
                               <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#FDEFD6] px-3 py-1 text-sm font-semibold text-[#F1A400]">
-                                Price: ${job.price}
+                                {t("providerJobs.price")}: ${job.price}
                               </div>
                             </div>
                             <div className="flex flex-col gap-2">
@@ -681,7 +694,7 @@ export const ProviderJobs = () => {
                                     )
                                   }
                                 >
-                                  View Job
+                                  {t("providerJobs.viewJob")}
                                 </Button>
                               )}
                               {status === "upcoming" && (
@@ -690,7 +703,7 @@ export const ProviderJobs = () => {
                                   className="bg-[#F7C876] hover:bg-[#EFA055]"
                                   onClick={() => handleStartFromJob(job)}
                                 >
-                                  Start Job
+                                  {t("providerJobs.startJob")}
                                 </Button>
                               )}
                               {status === "in-progress" && (
@@ -700,7 +713,7 @@ export const ProviderJobs = () => {
                                   onClick={() => handleCompleteFromJob(job)}
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
-                                  Mark Complete
+                                  {t("providerJobs.markComplete")}
                                 </Button>
                               )}
                               <Button
@@ -719,7 +732,7 @@ export const ProviderJobs = () => {
                                   })
                                 }
                               >
-                                Contact Client
+                                {t("providerJobs.contactClient")}
                               </Button>
                             </div>
                           </div>

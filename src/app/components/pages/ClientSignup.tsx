@@ -3,19 +3,29 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { SignupTabs } from "./SignupTabs";
+import { useTranslation } from "react-i18next";
+import { useAllowedCountries } from "@/app/hooks/useAllowedCountries";
+import {
+  getCurrencyForCountry,
+  normalizeCountryCode,
+} from "@/app/lib/countryConfig";
+import { useEffect } from "react";
 
 export function ClientSignup() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { signUp } = useAuth();
+  const { allowedCountries, isLoading: countriesLoading } =
+    useAllowedCountries();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
+    country: "",
     address: "",
     password: "",
     confirmPassword: "",
@@ -24,15 +34,41 @@ export function ClientSignup() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (formData.country) {
+      return;
+    }
+
+    const firstCountry = allowedCountries[0]?.code;
+    if (!firstCountry) {
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, country: firstCountry }));
+  }, [allowedCountries, formData.country]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setInfoMessage(null);
 
     if (formData.password !== formData.confirmPassword) {
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage(t("clientSignup.passwordMismatch"));
       return;
     }
+
+    if (!formData.phone.trim()) {
+      setErrorMessage(t("clientSignup.phoneRequired"));
+      return;
+    }
+
+    const country = normalizeCountryCode(formData.country);
+    if (!country) {
+      setErrorMessage(t("clientSignup.countryRequired"));
+      return;
+    }
+
+    const currency = getCurrencyForCountry(country);
 
     setIsSubmitting(true);
     try {
@@ -40,7 +76,8 @@ export function ClientSignup() {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        phone: formData.phone,
+        phone: formData.phone.trim(),
+        country,
         role: "client",
         address: formData.address,
       });
@@ -52,7 +89,9 @@ export function ClientSignup() {
             role: "client",
             email: formData.email,
             full_name: formData.fullName,
-            phone: formData.phone,
+            phone: formData.phone.trim(),
+            country,
+            currency,
             location: { address: formData.address },
           },
           { onConflict: "id" },
@@ -67,6 +106,8 @@ export function ClientSignup() {
           .upsert(
             {
               user_id: userId,
+              country,
+              currency,
             },
             { onConflict: "user_id" },
           );
@@ -111,9 +152,11 @@ export function ClientSignup() {
         <SignupTabs />
         <Card>
           <CardHeader className="mb-4">
-            <CardTitle className="text-2xl">Create Client Account</CardTitle>
+            <CardTitle className="text-2xl">
+              {t("clientSignup.title")}
+            </CardTitle>
             <p className="text-muted-foreground">
-              Find and book trusted service providers
+              {t("clientSignup.subtitle")}
             </p>
           </CardHeader>
 
@@ -131,12 +174,13 @@ export function ClientSignup() {
               )}
               <div>
                 <Label htmlFor="fullName">
-                  Full Name <span className="text-red-600">*</span>
+                  {t("clientSignup.fullName")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder={t("clientSignup.fullNamePlaceholder")}
                   value={formData.fullName}
                   onChange={(e) =>
                     setFormData({ ...formData, fullName: e.target.value })
@@ -146,13 +190,50 @@ export function ClientSignup() {
               </div>
 
               <div>
+                <Label htmlFor="country">
+                  {t("clientSignup.country")}{" "}
+                  <span className="text-red-600">*</span>
+                </Label>
+                <select
+                  id="country"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  value={formData.country}
+                  onChange={(e) =>
+                    setFormData({ ...formData, country: e.target.value })
+                  }
+                  disabled={countriesLoading}
+                  required
+                >
+                  {countriesLoading ? (
+                    <option value="">
+                      {t("clientSignup.loadingCountries")}
+                    </option>
+                  ) : (
+                    allowedCountries.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {formData.country && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {t("clientSignup.currencyHint", {
+                      currency: getCurrencyForCountry(formData.country),
+                    })}
+                  </p>
+                )}
+              </div>
+
+              <div>
                 <Label htmlFor="email">
-                  Email Address <span className="text-red-600">*</span>
+                  {t("clientSignup.emailLabel")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="john@example.com"
+                  placeholder={t("clientSignup.emailPlaceholder")}
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -163,12 +244,13 @@ export function ClientSignup() {
 
               <div>
                 <Label htmlFor="phone">
-                  Phone Number <span className="text-red-600">*</span>
+                  {t("clientSignup.phone")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder={t("clientSignup.phonePlaceholder")}
                   value={formData.phone}
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
@@ -179,12 +261,13 @@ export function ClientSignup() {
 
               <div>
                 <Label htmlFor="address">
-                  Address <span className="text-red-600">*</span>
+                  {t("clientSignup.address")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="address"
                   type="text"
-                  placeholder="123 Main St, City, Province"
+                  placeholder={t("clientSignup.addressPlaceholder")}
                   value={formData.address}
                   onChange={(e) =>
                     setFormData({ ...formData, address: e.target.value })
@@ -195,12 +278,13 @@ export function ClientSignup() {
 
               <div>
                 <Label htmlFor="password">
-                  Password <span className="text-red-600">*</span>
+                  {t("clientSignup.password")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={t("clientSignup.passwordPlaceholder")}
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
@@ -211,12 +295,13 @@ export function ClientSignup() {
 
               <div>
                 <Label htmlFor="confirmPassword">
-                  Confirm Password <span className="text-red-600">*</span>
+                  {t("clientSignup.confirmPassword")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={t("clientSignup.confirmPasswordPlaceholder")}
                   value={formData.confirmPassword}
                   onChange={(e) =>
                     setFormData({
@@ -232,27 +317,29 @@ export function ClientSignup() {
                 type="submit"
                 className="w-full bg-[#F7C876] hover:bg-[#EFA055] py-6"
               >
-                {isSubmitting ? "Creating Account..." : "Create Account"}
+                {isSubmitting
+                  ? t("clientSignup.submitting")
+                  : t("clientSignup.button")}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-gray-600">
-                Already have an account?{" "}
+                {t("clientSignup.alreadyHaveAccount")}{" "}
                 <button
                   onClick={() => navigate("/signin")}
                   className="text-[#F7C876] hover:text-[#EFA055] font-semibold"
                 >
-                  Sign In
+                  {t("clientSignup.signInLink")}
                 </button>
               </p>
               <p className="text-gray-600 mt-3">
-                Want to offer services?{" "}
+                {t("clientSignup.wantToOffer")}{" "}
                 <button
                   onClick={() => navigate("/provider-signup")}
                   className="text-[#F7C876] hover:text-[#EFA055] font-semibold"
                 >
-                  Become a Provider
+                  {t("clientSignup.becomeProvider")}
                 </button>
               </p>
             </div>

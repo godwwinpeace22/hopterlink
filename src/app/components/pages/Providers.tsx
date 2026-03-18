@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@/lib/router";
+import { useTranslation } from "react-i18next";
 import {
   Star,
   MapPin,
@@ -48,22 +49,28 @@ function availabilityColor(status: ProviderListing["availability"]) {
 function availabilityLabel(status: ProviderListing["availability"]) {
   switch (status) {
     case "available":
-      return "Available";
+      return "providers.available";
     case "busy":
-      return "Busy";
+      return "providers.busy";
     case "offline":
-      return "Offline";
+      return "providers.offline";
   }
 }
 
 function formatResponseTime(minutes: number | null): string {
-  if (!minutes) return "Flexible";
+  if (!minutes) return "";
   if (minutes < 60) return `${minutes}m`;
   if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
   return `${Math.round(minutes / 1440)}d`;
 }
 
-function ProviderCard({ provider }: { provider: ProviderListing }) {
+function ProviderCard({
+  provider,
+  t,
+}: {
+  provider: ProviderListing;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
   return (
     <Link
       to={`/providers/${provider.id}`}
@@ -85,7 +92,7 @@ function ProviderCard({ provider }: { provider: ProviderListing }) {
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full text-white ${availabilityColor(provider.availability)}`}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
-            {availabilityLabel(provider.availability)}
+            {t(availabilityLabel(provider.availability))}
           </span>
         </div>
       </div>
@@ -129,7 +136,7 @@ function ProviderCard({ provider }: { provider: ProviderListing }) {
           </span>
           <span className="flex items-center gap-1">
             <Briefcase className="h-3.5 w-3.5" />
-            {provider.completedJobs} jobs
+            {provider.completedJobs} {t("providers.jobs")}
           </span>
           {provider.location && (
             <span className="flex items-center gap-1">
@@ -160,11 +167,13 @@ function ProviderCard({ provider }: { provider: ProviderListing }) {
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           <p className="text-sm font-semibold text-gray-900">
             ${provider.hourlyRate}
-            <span className="text-xs font-normal text-gray-500">/hr</span>
+            <span className="text-xs font-normal text-gray-500">
+              {t("providers.perHour")}
+            </span>
           </p>
           <span className="flex items-center gap-1 text-xs text-gray-500">
             <Clock className="h-3.5 w-3.5" />
-            {provider.responseTime}
+            {provider.responseTime || t("providers.flexible")}
           </span>
         </div>
       </div>
@@ -216,11 +225,10 @@ function useProviderListings() {
 
         return {
           id: p.user_id,
-          name: profile?.full_name ?? p.business_name ?? "Service Provider",
+          name: profile?.full_name ?? p.business_name ?? "",
           avatar: profile?.avatar_url ?? "",
-          tagline:
-            p.business_name ?? p.services?.[0] ?? "Professional Services",
-          category: p.services?.[0] ?? "General",
+          tagline: p.business_name ?? p.services?.[0] ?? "",
+          category: p.services?.[0] ?? "",
           rating: p.rating ?? 0,
           reviewCount: p.total_reviews ?? 0,
           completedJobs: p.jobs_completed ?? 0,
@@ -239,6 +247,7 @@ function useProviderListings() {
 
 export function Providers() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const showAll = !!user;
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,22 +269,25 @@ export function Providers() {
     ? filtered
     : filtered.slice(0, VISIBLE_COUNT);
 
+  const displayProviders = visibleProviders.map((provider) => ({
+    ...provider,
+    name: provider.name || t("providers.providerDefault"),
+    tagline: provider.tagline || t("providers.professionalServices"),
+    category: provider.category || t("providers.general"),
+  }));
+
   return (
     <section className="py-12 lg:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Page header */}
         <div className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Browse{" "}
+            {t("providers.title")}{" "}
             <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-              Providers
+              {t("providers.titleAccent")}
             </span>
           </h1>
-          <p className="text-gray-600 max-w-2xl">
-            Find verified professionals across design, development, home
-            services, and more. View profiles, portfolios, and ratings to pick
-            the right person for the job.
-          </p>
+          <p className="text-gray-600 max-w-2xl">{t("providers.subtitle")}</p>
         </div>
 
         {/* Search / filter bar */}
@@ -284,7 +296,7 @@ export function Providers() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, skill, or category…"
+              placeholder={t("providers.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-amber-500 transition-colors"
@@ -296,12 +308,12 @@ export function Providers() {
         <div className="relative">
           {isLoading ? (
             <div className="text-center py-12 text-gray-500">
-              Loading providers...
+              {t("providers.loading")}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {visibleProviders.map((provider) => (
-                <ProviderCard key={provider.id} provider={provider} />
+              {displayProviders.map((provider) => (
+                <ProviderCard key={provider.id} provider={provider} t={t} />
               ))}
             </div>
           )}
@@ -312,24 +324,23 @@ export function Providers() {
               <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent" />
               <div className="relative flex flex-col items-center pb-6 pointer-events-auto">
                 <p className="text-gray-700 font-medium mb-1">
-                  Sign in to view all {filtered.length} providers
+                  {t("providers.signInToViewAll", { count: filtered.length })}
                 </p>
                 <p className="text-sm text-gray-500 mb-4">
-                  Create a free account to browse profiles, send messages, and
-                  book services.
+                  {t("providers.createFree")}
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => navigate("/signin")}
                     className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    Sign In
+                    {t("providers.signIn")}
                   </button>
                   <button
                     onClick={() => navigate("/client-signup")}
                     className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-medium hover:from-amber-600 hover:to-orange-600 transition-all"
                   >
-                    Get Started — It's Free
+                    {t("providers.getStartedFree")}
                   </button>
                 </div>
               </div>

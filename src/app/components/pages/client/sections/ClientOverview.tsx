@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useClientDashboard } from "../ClientDashboardContext";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
@@ -29,34 +30,35 @@ const ClientStatsCards = ({
   unreadMessages: number;
   memberSince: string;
 }) => {
+  const { t } = useTranslation();
   const stats = [
     {
-      title: "Active Bookings",
+      title: t("clientOverview.statActiveBookings"),
       value: bookings.filter((booking: any) => booking.status !== "completed")
         .length,
-      hint: "Live appointments",
+      hint: t("clientOverview.statActiveHint"),
       icon: <Briefcase className="h-5 w-5" />,
       tone: "bg-[#FFF1D6] text-[#B87503]",
     },
     {
-      title: "Completed Jobs",
+      title: t("clientOverview.statCompleted"),
       value: bookings.filter((booking: any) => booking.status === "completed")
         .length,
-      hint: "Finished successfully",
+      hint: t("clientOverview.statCompletedHint"),
       icon: <CheckCircle className="h-5 w-5" />,
       tone: "bg-emerald-100 text-emerald-700",
     },
     {
-      title: "Unread Messages",
+      title: t("clientOverview.statUnread"),
       value: unreadMessages,
-      hint: "Waiting on your reply",
+      hint: t("clientOverview.statUnreadHint"),
       icon: <MessageSquare className="h-5 w-5" />,
       tone: "bg-[#FFF7E8] text-[#A15C00]",
     },
     {
-      title: "Member Since",
+      title: t("clientOverview.statMemberSince"),
       value: memberSince || "2026",
-      hint: "Trusted account",
+      hint: t("clientOverview.statMemberHint"),
       icon: <User className="h-5 w-5" />,
       tone: "bg-slate-100 text-slate-700",
     },
@@ -91,6 +93,7 @@ export const ClientOverview = () => {
   const { user } = useAuth();
   const { clientData, navigateToSection, unreadMessages } =
     useClientDashboard();
+  const { t } = useTranslation();
 
   const { data: bookingsResult } = useSupabaseQuery(
     ["client_bookings_overview_main", user?.id],
@@ -203,11 +206,13 @@ export const ClientOverview = () => {
           <div className="space-y-5">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#F7C876]/70 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#9A6500]">
               <Sparkles className="h-3.5 w-3.5" />
-              Client dashboard
+              {t("clientOverview.dashboardBadge")}
             </div>
             <div>
               <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-950 lg:text-4xl">
-                Welcome back, {(clientData.name || "there").split(" ")[0]}.
+                {t("clientOverview.welcome", {
+                  name: (clientData.name || "there").split(" ")[0],
+                })}
               </h2>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -215,7 +220,7 @@ export const ClientOverview = () => {
                 className="bg-[#F1A400] text-slate-950 hover:bg-[#EFA055]"
                 onClick={() => navigateToSection("providers")}
               >
-                Browse Providers
+                {t("clientOverview.browseProviders")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
@@ -224,14 +229,14 @@ export const ClientOverview = () => {
                 onClick={() => navigateToSection("post-job")}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Post a Job
+                {t("clientOverview.postJobButton")}
               </Button>
               <Button
                 variant="ghost"
                 className="text-slate-700 hover:bg-white/70"
                 onClick={() => navigateToSection("bookings")}
               >
-                View all bookings
+                {t("clientOverview.viewAllBookings")}
               </Button>
             </div>
           </div>
@@ -239,7 +244,7 @@ export const ClientOverview = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
             <div className="rounded-2xl border border-white/70 bg-white/80 p-5 backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Next up
+                {t("clientOverview.nextUp")}
               </p>
               {upcomingBookings[0] ? (
                 <>
@@ -257,12 +262,12 @@ export const ClientOverview = () => {
                     className="mt-4 h-auto p-0 text-[#A15C00] hover:bg-transparent hover:text-[#8A4E00]"
                     onClick={() => navigateToSection("bookings")}
                   >
-                    Open booking timeline
+                    {t("clientOverview.openBookingTimeline")}
                   </Button>
                 </>
               ) : (
                 <p className="mt-3 text-sm text-slate-500">
-                  No upcoming bookings yet. Start by browsing providers.
+                  {t("clientOverview.noUpcomingBooking")}
                 </p>
               )}
             </div>
@@ -298,7 +303,7 @@ export const ClientOverview = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-[#F1A400]" />
-              Upcoming Bookings
+              {t("clientOverview.upcomingBookingsTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -334,14 +339,14 @@ export const ClientOverview = () => {
                       variant="outline"
                       className="mt-1 border-[#F7C876] text-[#A15C00]"
                     >
-                      Scheduled
+                      {t("clientOverview.scheduled")}
                     </Badge>
                   </div>
                 </div>
               ))}
               {upcomingBookings.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-[#F7C876]/60 bg-[#FFF7E8] px-5 py-8 text-center text-sm text-slate-600">
-                  You have no upcoming bookings yet.
+                  {t("clientOverview.noUpcomingYet")}
                 </div>
               )}
               <Button
@@ -349,7 +354,7 @@ export const ClientOverview = () => {
                 className="w-full border-[#F7C876] text-[#8A5A00] hover:bg-[#FFF7E8] hover:text-[#8A5A00]"
                 onClick={() => navigateToSection("bookings")}
               >
-                View All Bookings
+                {t("clientOverview.viewAllBookingsBtn")}
               </Button>
             </div>
           </CardContent>
@@ -359,7 +364,7 @@ export const ClientOverview = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-[#F1A400]" />
-              Recent Messages
+              {t("clientOverview.recentMessagesTitle")}
               {unreadMessages > 0 && (
                 <Badge className="bg-red-500 text-white">
                   {unreadMessages}
@@ -404,11 +409,11 @@ export const ClientOverview = () => {
                 className="w-full"
                 onClick={() => navigateToSection("messages")}
               >
-                View All Messages
+                {t("clientOverview.viewAllMessages")}
               </Button>
               {messages.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-[#F7C876]/60 bg-[#FFF7E8] px-5 py-8 text-center text-sm text-slate-600">
-                  No messages yet.
+                  {t("clientOverview.recentMessagesEmpty")}
                 </div>
               )}
             </div>

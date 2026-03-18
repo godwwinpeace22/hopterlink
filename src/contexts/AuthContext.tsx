@@ -11,6 +11,10 @@ import isEqual from "fast-deep-equal";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import {
+  getCurrencyForCountry,
+  normalizeCountryCode,
+} from "@/app/lib/countryConfig";
 
 export type UserRole = "client" | "provider" | "admin";
 export type RoleMembershipState =
@@ -33,6 +37,8 @@ export type Profile = {
   email: string;
   full_name: string | null;
   phone: string | null;
+  country: string | null;
+  currency: string | null;
   avatar_url: string | null;
   phone_verified?: boolean | null;
 };
@@ -42,6 +48,7 @@ export type SignUpInput = {
   password: string;
   fullName: string;
   phone: string;
+  country: string;
   role: UserRole;
   address?: string;
   businessName?: string;
@@ -93,6 +100,8 @@ async function ensureUserSetup(
     role?: UserRole;
     full_name?: string;
     phone?: string;
+    country?: string;
+    currency?: string;
     address?: string;
     business_name?: string;
     category?: string;
@@ -102,6 +111,13 @@ async function ensureUserSetup(
 
   const desiredRole = existingProfile?.role ?? metadata.role ?? "client";
   const email = user.email ?? existingProfile?.email;
+  const country = normalizeCountryCode(
+    metadata.country ?? existingProfile?.country,
+  );
+  const currency =
+    metadata.currency ??
+    existingProfile?.currency ??
+    getCurrencyForCountry(country);
 
   if (!email) {
     return false;
@@ -117,6 +133,8 @@ async function ensureUserSetup(
         email,
         full_name: metadata.full_name ?? user.user_metadata.full_name ?? null,
         phone: metadata.phone ?? null,
+        country,
+        currency,
         location: metadata.address ? { address: metadata.address } : undefined,
       },
       { onConflict: "id" },
@@ -133,6 +151,8 @@ async function ensureUserSetup(
         supabase.from("client_profiles").upsert(
           {
             user_id: user.id,
+            country,
+            currency,
           },
           { onConflict: "user_id" },
         ),
@@ -171,6 +191,8 @@ async function ensureUserSetup(
       .upsert(
         {
           user_id: user.id,
+          country,
+          currency,
           business_name:
             metadata.business_name?.trim() ||
             metadata.full_name?.trim() ||
@@ -215,7 +237,9 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     queryFn: () =>
       supabase
         .from("profiles")
-        .select("id, role, email, full_name, phone, avatar_url, phone_verified")
+        .select(
+          "id, role, email, full_name, phone, country, currency, avatar_url, phone_verified",
+        )
         .eq("id", userId)
         .single(),
     staleTime: 30_000,
@@ -369,9 +393,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (input: SignUpInput) => {
+    const phone = input.phone.trim();
+    if (!phone) {
+      throw new Error("Phone number is required.");
+    }
+
+    const country = normalizeCountryCode(input.country);
+    if (!country) {
+      throw new Error("Country is required.");
+    }
+
+    const currency = getCurrencyForCountry(country);
+
     const metadata: Record<string, string | number> = {
       full_name: input.fullName,
-      phone: input.phone,
+      phone,
+      country,
+      currency,
       role: input.role,
     };
 
@@ -400,6 +438,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password: input.password,
       options: {
         data: metadata,
+        emailRedirectTo: `${window.location.origin}/verify-email`,
       },
     });
 

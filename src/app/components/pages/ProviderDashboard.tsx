@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, Outlet } from "@/lib/router";
 import logo from "@/assets/logo.png";
 import { Badge } from "../ui/badge";
@@ -36,49 +37,93 @@ import {
 } from "./provider/ProviderDashboardContext";
 import { useProviderDashboardData } from "./provider/useProviderDashboardData";
 
-type NavItem = {
-  id: ProviderDashboardSection;
-  label: string;
-  icon: typeof LayoutDashboard;
-};
-
-const navigationItems: NavItem[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "job-board", label: "Job Board", icon: Search },
-  { id: "jobs", label: "My Jobs", icon: CalendarIcon },
-  { id: "calendar", label: "Availability", icon: CalendarIcon },
-  { id: "wallet", label: "Wallet", icon: Wallet },
-  { id: "profile", label: "Profile", icon: User },
-  { id: "messages", label: "Messages", icon: MessageSquare },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "reviews", label: "Reviews", icon: Star },
-  { id: "settings", label: "Settings", icon: Settings },
-];
-
-const navigationSections = [
-  { title: "Overview", items: ["overview"] as ProviderDashboardSection[] },
-  {
-    title: "Work",
-    items: [
-      "job-board",
-      "jobs",
-      "calendar",
-      "messages",
-      "notifications",
-    ] as ProviderDashboardSection[],
-  },
-  {
-    title: "Business",
-    items: ["wallet", "reviews"] as ProviderDashboardSection[],
-  },
-  {
-    title: "Account",
-    items: ["profile", "settings"] as ProviderDashboardSection[],
-  },
-];
-
 export function ProviderDashboard() {
   const data = useProviderDashboardData();
+  const { t } = useTranslation();
+
+  const navigationItems = useMemo(
+    () => [
+      {
+        id: "overview" as ProviderDashboardSection,
+        label: t("providerDashboard.navOverview"),
+        icon: LayoutDashboard,
+      },
+      {
+        id: "job-board" as ProviderDashboardSection,
+        label: t("providerDashboard.navJobBoard"),
+        icon: Search,
+      },
+      {
+        id: "jobs" as ProviderDashboardSection,
+        label: t("providerDashboard.navMyJobs"),
+        icon: CalendarIcon,
+      },
+      {
+        id: "calendar" as ProviderDashboardSection,
+        label: t("providerDashboard.navAvailability"),
+        icon: CalendarIcon,
+      },
+      {
+        id: "wallet" as ProviderDashboardSection,
+        label: t("providerDashboard.navWallet"),
+        icon: Wallet,
+      },
+      {
+        id: "profile" as ProviderDashboardSection,
+        label: t("providerDashboard.navProfile"),
+        icon: User,
+      },
+      {
+        id: "messages" as ProviderDashboardSection,
+        label: t("providerDashboard.navMessages"),
+        icon: MessageSquare,
+      },
+      {
+        id: "notifications" as ProviderDashboardSection,
+        label: t("providerDashboard.navNotifications"),
+        icon: Bell,
+      },
+      {
+        id: "reviews" as ProviderDashboardSection,
+        label: t("providerDashboard.navReviews"),
+        icon: Star,
+      },
+      {
+        id: "settings" as ProviderDashboardSection,
+        label: t("providerDashboard.navSettings"),
+        icon: Settings,
+      },
+    ],
+    [t],
+  );
+
+  const navigationSections = useMemo(
+    () => [
+      {
+        title: t("providerDashboard.sectionOverview"),
+        items: ["overview"] as ProviderDashboardSection[],
+      },
+      {
+        title: t("providerDashboard.sectionWork"),
+        items: [
+          "job-board",
+          "jobs",
+          "calendar",
+          "messages",
+          "notifications",
+        ] as ProviderDashboardSection[],
+      },
+      {
+        title: t("providerDashboard.sectionBusiness"),
+        items: ["wallet", "reviews"] as ProviderDashboardSection[],
+      },
+      {
+        title: t("providerDashboard.sectionAccount"),
+        items: ["profile", "settings"] as ProviderDashboardSection[],
+      },
+    ],
+    [t],
+  );
 
   const contextValue = useMemo(
     () => ({
@@ -188,7 +233,7 @@ export function ProviderDashboard() {
                   className="text-red-600 hover:text-red-600 cursor-pointer"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Sign Out</span>
+                  <span>{t("providerDashboard.signOut")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

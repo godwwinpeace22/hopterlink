@@ -6,6 +6,7 @@ import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Upload, MapPin, DollarSign, Calendar } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +15,7 @@ import { useServiceCategories } from "@/lib/useServiceCategories";
 
 export function PostJob() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { categories } = useServiceCategories();
   const [jobData, setJobData] = useState({
@@ -44,7 +46,7 @@ export function PostJob() {
     setErrorMessage(null);
 
     if (!user?.id) {
-      setErrorMessage("You must be signed in to post a job.");
+      setErrorMessage(t("postJob.errorSignIn"));
       return;
     }
 
@@ -101,7 +103,7 @@ export function PostJob() {
       navigate("/dashboard/client/my-jobs");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to post job.";
+        error instanceof Error ? error.message : t("postJob.errorFallback");
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -110,7 +112,7 @@ export function PostJob() {
 
   return (
     <div className="max-w-3xl space-y-6 pt-6">
-      <PageHeader title="Post a Job" />
+      <PageHeader title={t("postJob.title")} />
       <Card>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6 pt-8">
@@ -122,11 +124,12 @@ export function PostJob() {
             {/* Job Title */}
             <div>
               <Label htmlFor="title" className="mb-2">
-                Job Title <span className="text-red-600">*</span>
+                {t("postJob.jobTitleLabel")}{" "}
+                <span className="text-red-600">*</span>
               </Label>
               <Input
                 id="title"
-                placeholder="e.g., Need landscaping for backyard"
+                placeholder={t("postJob.jobTitlePlaceholder")}
                 value={jobData.title}
                 onChange={(e) =>
                   setJobData({ ...jobData, title: e.target.value })
@@ -138,7 +141,8 @@ export function PostJob() {
             {/* Service Category */}
             <div>
               <Label htmlFor="category" className="mb-2">
-                Service Category <span className="text-red-600">*</span>
+                {t("postJob.categoryLabel")}{" "}
+                <span className="text-red-600">*</span>
               </Label>
               <select
                 id="category"
@@ -149,7 +153,7 @@ export function PostJob() {
                 }
                 required
               >
-                <option value="">Select a category</option>
+                <option value="">{t("postJob.categoryPlaceholder")}</option>
                 {categories.map((c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.name}
@@ -161,11 +165,12 @@ export function PostJob() {
             {/* Job Description */}
             <div>
               <Label htmlFor="description" className="mb-2">
-                Job Description <span className="text-red-600">*</span>
+                {t("postJob.descriptionLabel")}{" "}
+                <span className="text-red-600">*</span>
               </Label>
               <Textarea
                 id="description"
-                placeholder="Describe the work needed, any specific requirements, materials, timeline, etc."
+                placeholder={t("postJob.descriptionPlaceholder")}
                 value={jobData.description}
                 onChange={(e) =>
                   setJobData({ ...jobData, description: e.target.value })
@@ -174,7 +179,7 @@ export function PostJob() {
                 required
               />
               <p className="text-sm text-gray-500 mt-1">
-                Be as detailed as possible to receive accurate quotes
+                {t("postJob.descriptionHint")}
               </p>
             </div>
 
@@ -182,7 +187,7 @@ export function PostJob() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="budgetType" className="mb-2">
-                  Budget Type
+                  {t("postJob.budgetTypeLabel")}
                 </Label>
                 <select
                   id="budgetType"
@@ -195,13 +200,16 @@ export function PostJob() {
                     })
                   }
                 >
-                  <option value="fixed">Fixed Price</option>
-                  <option value="hourly">Hourly Rate</option>
+                  <option value="fixed">{t("postJob.budgetTypeFixed")}</option>
+                  <option value="hourly">
+                    {t("postJob.budgetTypeHourly")}
+                  </option>
                 </select>
               </div>
               <div>
                 <Label htmlFor="budget" className="mb-2">
-                  Estimated Budget <span className="text-red-600">*</span>
+                  {t("postJob.budgetEstimateLabel")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -218,7 +226,7 @@ export function PostJob() {
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Providers will submit their own quotes
+                  {t("postJob.providersSubmitQuotes")}
                 </p>
               </div>
             </div>
@@ -226,13 +234,14 @@ export function PostJob() {
             {/* Location */}
             <div>
               <Label htmlFor="location" className="mb-2">
-                Job Location <span className="text-red-600">*</span>
+                {t("postJob.jobLocationLabel")}{" "}
+                <span className="text-red-600">*</span>
               </Label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="location"
-                  placeholder="Address or city"
+                  placeholder={t("postJob.locationPlaceholder")}
                   className="pl-10"
                   value={jobData.location}
                   onChange={(e) =>
@@ -247,7 +256,7 @@ export function PostJob() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="urgency" className="mb-2">
-                  Urgency Level
+                  {t("postJob.urgencyLevelLabel")}
                 </Label>
                 <select
                   id="urgency"
@@ -260,13 +269,17 @@ export function PostJob() {
                     })
                   }
                 >
-                  <option value="flexible">Flexible Timeline</option>
-                  <option value="urgent">Urgent (ASAP)</option>
+                  <option value="flexible">
+                    {t("postJob.urgencyFlexibleTimeline")}
+                  </option>
+                  <option value="urgent">
+                    {t("postJob.urgencyUrgentAsap")}
+                  </option>
                 </select>
               </div>
               <div>
                 <Label htmlFor="preferredDate" className="mb-2">
-                  Preferred Start Date
+                  {t("postJob.preferredStartDateLabel")}
                 </Label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -288,7 +301,7 @@ export function PostJob() {
 
             {/* Photo Upload */}
             <div>
-              <Label className="mb-2">Photos (Optional)</Label>
+              <Label className="mb-2">{t("postJob.photosOptional")}</Label>
               <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-[#F7C876] transition-colors">
                 <div className="text-center">
                   <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -297,7 +310,7 @@ export function PostJob() {
                       htmlFor="file-upload"
                       className="relative cursor-pointer rounded-md font-medium text-[#F7C876] hover:text-[#EFA055]"
                     >
-                      <span>Upload photos</span>
+                      <span>{t("postJob.uploadPhotos")}</span>
                       <input
                         id="file-upload"
                         name="file-upload"
@@ -308,10 +321,10 @@ export function PostJob() {
                         onChange={handlePhotoUpload}
                       />
                     </label>
-                    <p className="pl-1">or drag and drop</p>
+                    <p className="pl-1">{t("postJob.dragDrop")}</p>
                   </div>
                   <p className="text-xs text-gray-500">
-                    PNG, JPG, GIF up to 10MB
+                    {t("postJob.fileTypesHint")}
                   </p>
                 </div>
                 {jobData.photos.length > 0 && (
@@ -355,13 +368,15 @@ export function PostJob() {
                 className="flex-1"
                 onClick={() => navigate("/dashboard/client")}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 type="submit"
                 className="flex-1 bg-[#F7C876] hover:bg-[#EFA055]"
               >
-                {isSubmitting ? "Posting..." : "Post Job & Get Quotes"}
+                {isSubmitting
+                  ? t("postJob.submitting")
+                  : t("postJob.submitGetQuotes")}
               </Button>
             </div>
           </form>

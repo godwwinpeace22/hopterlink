@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+import { useTranslation } from "react-i18next";
 
 const testimonials = [
   {
@@ -34,6 +35,7 @@ const testimonials = [
 ];
 
 export function Testimonials() {
+  const { t } = useTranslation();
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
@@ -49,15 +51,12 @@ export function Testimonials() {
         {/* Section Header */}
         <div className="text-center max-w-xl mx-auto mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-            Genuine reviews from{" "}
+            {t("testimonials.titleMain")}{" "}
             <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-              Customers
+              {t("testimonials.titleHighlight")}
             </span>
           </h2>
-          <p className="text-gray-600">
-            Each listing is designed to be clear and concise, providing
-            customers with the best experience.
-          </p>
+          <p className="text-gray-600">{t("testimonials.subtitle")}</p>
         </div>
 
         {/* Carousel */}
@@ -127,11 +126,12 @@ export function Testimonials() {
         {/* Summary */}
         <div className="text-center mt-10">
           <h6 className="font-semibold text-gray-900 mb-2">
-            Each listing is designed to be clear and concise, providing
-            customers
+            {t("testimonials.eachListingTitle")}
           </h6>
           <div className="flex items-center justify-center gap-2">
-            <span className="font-medium text-gray-900">Excellent</span>
+            <span className="font-medium text-gray-900">
+              {t("testimonials.excellent")}
+            </span>
             <div className="flex items-center gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
@@ -140,7 +140,9 @@ export function Testimonials() {
                 />
               ))}
             </div>
-            <span className="text-sm text-gray-500">Based on 456 reviews</span>
+            <span className="text-sm text-gray-500">
+              {t("testimonials.basedOnReviews", { count: 456 })}
+            </span>
           </div>
         </div>
       </div>

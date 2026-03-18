@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BookingItem } from "../ClientDashboardContext";
 import { Link, useNavigate } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
@@ -28,6 +29,7 @@ import { Calendar, MapPin, Star } from "lucide-react";
 export const ClientBookings = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(
     null,
@@ -204,7 +206,7 @@ export const ClientBookings = () => {
 
   return (
     <div className="space-y-6 pt-6">
-      <PageHeader title="My Bookings" hideBack />
+      <PageHeader title={t("clientBookings.title")} hideBack />
       {errorMessage && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}
@@ -212,8 +214,8 @@ export const ClientBookings = () => {
       )}
       <Card>
         <CardHeader>
-          <CardTitle>My Bookings</CardTitle>
-          <CardDescription>Manage your service appointments</CardDescription>
+          <CardTitle>{t("clientBookings.title")}</CardTitle>
+          <CardDescription>{t("clientBookings.cardDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {(() => {
@@ -244,24 +246,24 @@ export const ClientBookings = () => {
               <Tabs defaultValue="upcoming" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="upcoming">
-                    Upcoming ({upcomingBookings.length})
+                    {t("clientBookings.tabUpcoming")} ({upcomingBookings.length})
                   </TabsTrigger>
                   <TabsTrigger value="in-progress">
-                    In Progress ({inProgressBookings.length})
+                    {t("clientBookings.tabInProgress")} ({inProgressBookings.length})
                   </TabsTrigger>
                   <TabsTrigger value="completed">
-                    Completed ({completedBookings.length})
+                    {t("clientBookings.tabCompleted")} ({completedBookings.length})
                   </TabsTrigger>
                   <TabsTrigger value="cancelled">
-                    Cancelled ({cancelledBookings.length})
+                    {t("clientBookings.tabCancelled")} ({cancelledBookings.length})
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="upcoming" className="space-y-4 mt-6">
                   {upcomingBookings.length === 0
                     ? renderEmpty(
-                        "No upcoming bookings",
-                        "Book a service to see it here.",
+                        t("clientBookings.emptyUpcoming"),
+                        t("clientBookings.emptyUpcomingDesc"),
                       )
                     : upcomingBookings.map((booking: any) => {
                         const canMessage = [
@@ -297,8 +299,8 @@ export const ClientBookings = () => {
                                         }
                                       >
                                         {booking.bookingStatus === "pending"
-                                          ? "Pending"
-                                          : "Confirmed"}
+                                          ? t("clientBookings.statusPending")
+                                          : t("clientBookings.statusConfirmed")
                                       </Badge>
                                     </div>
                                     <p className="text-sm text-gray-600 mb-2">
@@ -337,13 +339,13 @@ export const ClientBookings = () => {
                                         {booking.address}
                                       </p>
                                       <p className="text-sm text-gray-600">
-                                        Payment:{" "}
+                                        {t("clientBookings.paymentLabel")}:{" "}
                                         {booking.escrowStatus ??
                                           booking.paymentStatus ??
                                           "pending"}
                                       </p>
                                       <p className="font-bold text-gray-900 mt-2">
-                                        Price: ${booking.price}
+                                        {t("clientBookings.price", { defaultValue: "Price" })}: ${booking.price}
                                       </p>
                                     </div>
                                   </div>
@@ -358,7 +360,7 @@ export const ClientBookings = () => {
                                       setDetailsDialogOpen(true);
                                     }}
                                   >
-                                    View Details
+                                    {t("clientBookings.viewDetails")}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -382,7 +384,7 @@ export const ClientBookings = () => {
                                       !canMessage || !booking.providerId
                                     }
                                   >
-                                    Contact Provider
+                                    {t("clientBookings.contactProvider")}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -399,8 +401,8 @@ export const ClientBookings = () => {
                                     }
                                   >
                                     {cancellingBookingId === booking.id
-                                      ? "Cancelling..."
-                                      : "Cancel Booking"}
+                                      ? t("clientBookings.cancelling")
+                                      : t("clientBookings.cancelBooking")}
                                   </Button>
                                 </div>
                               </div>
@@ -413,8 +415,8 @@ export const ClientBookings = () => {
                 <TabsContent value="in-progress" className="space-y-4 mt-6">
                   {inProgressBookings.length === 0
                     ? renderEmpty(
-                        "No active bookings",
-                        "You have no bookings in progress right now.",
+                        t("clientBookings.emptyInProgress"),
+                        t("clientBookings.emptyInProgressDesc"),
                       )
                     : inProgressBookings.map((booking: any) => {
                         const canMessage = [
@@ -443,7 +445,7 @@ export const ClientBookings = () => {
                                         {booking.service}
                                       </h3>
                                       <Badge className="bg-orange-500">
-                                        In Progress
+                                        {t("clientBookings.statusInProgress")}
                                       </Badge>
                                     </div>
                                     <p className="text-sm text-gray-600 mb-2">
@@ -475,7 +477,7 @@ export const ClientBookings = () => {
                                     <div className="space-y-1 text-sm text-gray-600">
                                       <p className="flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
-                                        Started: {booking.date} at{" "}
+                                        {t("clientBookings.started")}: {booking.date} at{" "}
                                         {booking.time}
                                       </p>
                                       <p className="flex items-center gap-2">
@@ -483,7 +485,7 @@ export const ClientBookings = () => {
                                         {booking.address}
                                       </p>
                                       <p className="font-bold text-gray-900 mt-2">
-                                        Price: ${booking.price}
+                                        {t("clientBookings.price")}: ${booking.price}
                                       </p>
                                     </div>
                                   </div>
@@ -498,7 +500,7 @@ export const ClientBookings = () => {
                                       setDetailsDialogOpen(true);
                                     }}
                                   >
-                                    View Details
+                                    {t("clientBookings.viewDetails")}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -522,7 +524,7 @@ export const ClientBookings = () => {
                                       !canMessage || !booking.providerId
                                     }
                                   >
-                                    Contact Provider
+                                    {t("clientBookings.contactProvider")}
                                   </Button>
                                 </div>
                               </div>
@@ -535,8 +537,8 @@ export const ClientBookings = () => {
                 <TabsContent value="completed" className="space-y-4 mt-6">
                   {completedBookings.length === 0
                     ? renderEmpty(
-                        "No completed bookings",
-                        "Finished services will appear here.",
+                        t("clientBookings.emptyCompleted"),
+                        t("clientBookings.emptyCompletedDesc"),
                       )
                     : completedBookings.map((booking: any) => (
                         <Card key={booking.id}>
@@ -558,7 +560,7 @@ export const ClientBookings = () => {
                                       {booking.service}
                                     </h3>
                                     <Badge className="bg-green-600">
-                                      Completed
+                                      {t("clientBookings.statusCompleted")}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-gray-600 mb-2">
@@ -590,16 +592,16 @@ export const ClientBookings = () => {
                                   <div className="space-y-1 text-sm text-gray-600">
                                     <p className="flex items-center gap-2">
                                       <Calendar className="h-4 w-4" />
-                                      Completed: {booking.date}
+                                      {t("clientBookings.completedLabel")}: {booking.date}
                                     </p>
                                     <p className="text-sm text-gray-600">
-                                      Payment:{" "}
+                                      {t("clientBookings.paymentLabel")}:{" "}
                                       {booking.escrowStatus ??
                                         booking.paymentStatus ??
                                         "pending"}
                                     </p>
                                     <p className="font-bold text-green-600 mt-2">
-                                      Paid: ${booking.price}
+                                      {t("clientBookings.paidLabel")}: ${booking.price}
                                     </p>
                                   </div>
                                 </div>
@@ -627,8 +629,8 @@ export const ClientBookings = () => {
                                 >
                                   <Star className="h-4 w-4 mr-2" />
                                   {booking.hasReview
-                                    ? "Reviewed"
-                                    : "Leave Review"}
+                                    ? t("clientBookings.reviewExists")
+                                    : t("clientBookings.leaveReview")}
                                 </Button>
                                 {/* <Button size="sm" variant="outline">
                                   View Receipt
@@ -647,7 +649,7 @@ export const ClientBookings = () => {
                                     setDetailsDialogOpen(true);
                                   }}
                                 >
-                                  View Details
+                                  {t("clientBookings.viewDetails")}
                                 </Button>
                               </div>
                             </div>
@@ -659,8 +661,8 @@ export const ClientBookings = () => {
                 <TabsContent value="cancelled" className="space-y-4 mt-6">
                   {cancelledBookings.length === 0
                     ? renderEmpty(
-                        "No cancelled bookings",
-                        "Cancelled or disputed bookings will appear here.",
+                        t("clientBookings.emptyCancelled"),
+                        t("clientBookings.emptyCancelledDesc"),
                       )
                     : cancelledBookings.map((booking: any) => (
                         <Card key={booking.id}>
@@ -689,8 +691,8 @@ export const ClientBookings = () => {
                                       }
                                     >
                                       {booking.bookingStatus === "disputed"
-                                        ? "Disputed"
-                                        : "Cancelled"}
+                                        ? t("clientBookings.statusDisputed")
+                                        : t("clientBookings.statusCancelled")
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-gray-600 mb-2">
@@ -718,13 +720,13 @@ export const ClientBookings = () => {
                                       {booking.address}
                                     </p>
                                     <p className="text-sm text-gray-600">
-                                      Payment:{" "}
+                                      {t("clientBookings.paymentLabel")}:{" "}
                                       {booking.escrowStatus ??
                                         booking.paymentStatus ??
                                         "pending"}
                                     </p>
                                     <p className="font-bold text-gray-900 mt-2">
-                                      Price: ${booking.price}
+                                      {t("clientBookings.price")}: ${booking.price}
                                     </p>
                                   </div>
                                 </div>
@@ -743,16 +745,16 @@ export const ClientBookings = () => {
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Leave a Review</DialogTitle>
+            <DialogTitle>{t("clientBookings.reviewTitle")}</DialogTitle>
             <DialogDescription>
-              Share your experience with {selectedBooking?.provider}
+              {selectedBooking?.provider}
             </DialogDescription>
           </DialogHeader>
           {selectedBooking && (
             <div className="space-y-4">
               {reviewExists && (
                 <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-                  You have already submitted a review for this booking.
+                  {t("clientBookings.reviewExists")}
                 </div>
               )}
               <div className="p-3 bg-gray-50 rounded-lg">
@@ -763,7 +765,7 @@ export const ClientBookings = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Rating</label>
+                <label className="block text-sm font-medium mb-2">{t("clientBookings.reviewLabel")}</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -781,11 +783,11 @@ export const ClientBookings = () => {
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Your Review
+                  {t("clientBookings.reviewTitle")}
                 </label>
                 <textarea
                   className="w-full border rounded-md p-3 min-h-[120px]"
-                  placeholder="Share details about your experience..."
+                  placeholder={t("clientBookings.reviewCommentPlaceholder")}
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
                 />
@@ -799,7 +801,7 @@ export const ClientBookings = () => {
                     reviewRating === 0 || reviewExists || isReviewSubmitting
                   }
                 >
-                  {isReviewSubmitting ? "Submitting..." : "Submit Review"}
+                  {isReviewSubmitting ? t("clientBookings.reviewSubmitting") : t("clientBookings.reviewSubmit")}
                 </Button>
                 <Button
                   onClick={() => {
@@ -809,7 +811,7 @@ export const ClientBookings = () => {
                   }}
                   variant="outline"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </div>
             </div>
@@ -820,9 +822,9 @@ export const ClientBookings = () => {
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Booking Details</DialogTitle>
+            <DialogTitle>{t("clientBookings.bookingDetails")}</DialogTitle>
             <DialogDescription>
-              Review the full booking summary for {selectedBooking?.service}.
+              {selectedBooking?.service}
             </DialogDescription>
           </DialogHeader>
           {selectedBooking && (
@@ -831,13 +833,13 @@ export const ClientBookings = () => {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9A6500]">
-                      Service
+                      {t("clientBookings.service")}
                     </p>
                     <p className="mt-1 text-lg font-semibold text-slate-950">
                       {selectedBooking.service}
                     </p>
                     <p className="text-sm text-slate-600">
-                      with {selectedBooking.provider}
+                      {t("clientBookings.withProvider", { name: selectedBooking.provider })}
                     </p>
                   </div>
                   <Badge className="bg-white text-[#8A5A00] hover:bg-white">
@@ -849,7 +851,7 @@ export const ClientBookings = () => {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Schedule
+                    {t("clientBookings.schedule")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
                     {selectedBooking.date} at {selectedBooking.time}
@@ -857,7 +859,7 @@ export const ClientBookings = () => {
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Total
+                    {t("clientBookings.total")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
                     ${selectedBooking.price}
@@ -865,15 +867,15 @@ export const ClientBookings = () => {
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4 sm:col-span-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Address
+                    {t("clientBookings.address")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
-                    {selectedBooking.address || "Address not provided"}
+                    {selectedBooking.address || t("clientBookings.addressNotProvided")}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Payment Status
+                    {t("clientBookings.paymentStatus")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
                     {selectedBooking.escrowStatus ??
@@ -883,10 +885,10 @@ export const ClientBookings = () => {
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Provider Rating
+                    {t("clientBookings.providerRating")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
-                    {selectedBooking.providerRating.toFixed(1)} / 5
+                    {t("clientBookings.ratingOutOf", { rating: selectedBooking.providerRating.toFixed(1) })}
                   </p>
                 </div>
               </div>
@@ -910,13 +912,13 @@ export const ClientBookings = () => {
                   }}
                   disabled={!selectedBooking.providerId}
                 >
-                  Contact Provider
+                  {t("clientBookings.contactProvider")}
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => setDetailsDialogOpen(false)}
                 >
-                  Close
+                  {t("common.close")}
                 </Button>
               </div>
             </div>

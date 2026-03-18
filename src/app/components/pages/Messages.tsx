@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -67,6 +68,7 @@ const getFirst = <T,>(value: T | T[] | null | undefined) =>
 
 export function Messages() {
   const { user, profile } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigationState =
     (location.state as {
@@ -359,7 +361,7 @@ export function Messages() {
       {
         id: pendingConversationId,
         otherUserId: navigationState.recipientId,
-        otherName: navigationState.recipientName ?? "User",
+        otherName: navigationState.recipientName ?? t("providerJobs.client"),
         otherAvatar: navigationState.recipientAvatar ?? null,
         jobId: navigationState.jobId ?? null,
         bookingId: navigationState.bookingId ?? null,
@@ -376,6 +378,7 @@ export function Messages() {
     messages,
     navigationState,
     pendingConversationId,
+    t,
     user?.id,
   ]);
 
@@ -558,7 +561,8 @@ export function Messages() {
             <div className="flex h-full min-h-0 flex-col">
               <CardHeader className="shrink-0 space-y-3 pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" /> Conversations
+                  <MessageSquare className="h-5 w-5" />{" "}
+                  {t("messages.conversations")}
                 </CardTitle>
                 <div className="rounded-md border border-border bg-background px-3 py-2">
                   <input
@@ -566,7 +570,7 @@ export function Messages() {
                     onChange={(event) =>
                       setConversationSearch(event.target.value)
                     }
-                    placeholder="Search conversations"
+                    placeholder={t("messages.searchPlaceholder")}
                     className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                   />
                 </div>
@@ -574,13 +578,13 @@ export function Messages() {
               <CardContent className="min-h-0 flex-1 p-0">
                 {isLoading ? (
                   <div className="p-6 text-sm text-muted-foreground">
-                    Loading conversations...
+                    {t("messages.loadingConversations")}
                   </div>
                 ) : filteredConversations.length === 0 ? (
                   <div className="p-6 text-sm text-muted-foreground">
                     {conversationSearch
-                      ? "No matching conversations."
-                      : "No conversations yet."}
+                      ? t("messages.noMatchingConversations")
+                      : t("messages.noConversations")}
                   </div>
                 ) : (
                   <div className="h-full overflow-y-auto">
@@ -621,7 +625,8 @@ export function Messages() {
                               </p>
                             )}
                             <p className="mt-1 truncate text-sm text-muted-foreground">
-                              {conversation.lastMessage || "No messages yet"}
+                              {conversation.lastMessage ||
+                                t("messages.noMessagesYet")}
                             </p>
                           </div>
                           {conversation.unreadCount > 0 && (
@@ -658,7 +663,7 @@ export function Messages() {
                     <CardTitle className="text-lg text-foreground">
                       {selectedConversation
                         ? selectedConversation.otherName
-                        : "Select a conversation"}
+                        : t("messages.selectConversation")}
                     </CardTitle>
                     {selectedConversation?.contextLabel && (
                       <p className="text-sm text-muted-foreground">
@@ -674,7 +679,7 @@ export function Messages() {
                     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-muted/20 px-6 py-4">
                       {conversationMessages.length === 0 ? (
                         <div className="text-sm text-muted-foreground">
-                          No messages in this thread yet.
+                          {t("messages.noMessagesThread")}
                         </div>
                       ) : (
                         conversationMessages.map((message) => {
@@ -684,7 +689,9 @@ export function Messages() {
                               ? (message.senderName ?? profile?.full_name)
                               : (message.senderName ??
                                 selectedConversation?.otherName)) ??
-                            (isMine ? "You" : "User");
+                            (isMine
+                              ? t("messages.youPrefix").replace(":", "").trim()
+                              : t("providerJobs.client"));
                           const displayName = rawName.split(" ")[0] || rawName;
                           const initials = rawName
                             .split(" ")
@@ -746,7 +753,7 @@ export function Messages() {
                           value={draft}
                           onChange={(event) => setDraft(event.target.value)}
                           onKeyDown={handleDraftKeyDown}
-                          placeholder="Type your message..."
+                          placeholder={t("messages.typePlaceholderAlt")}
                           className="min-h-[44px] max-h-[180px] flex-1 resize-none bg-background"
                         />
                         <Button
@@ -755,14 +762,14 @@ export function Messages() {
                           className="w-full shrink-0 sm:w-auto"
                         >
                           <Send className="h-4 w-4 mr-2" />
-                          Send
+                          {t("messages.send")}
                         </Button>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="p-6 text-sm text-muted-foreground">
-                    Select a conversation to start messaging.
+                    {t("messages.selectConversationToStart")}
                   </div>
                 )}
               </CardContent>

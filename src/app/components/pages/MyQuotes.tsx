@@ -14,6 +14,7 @@ import {
   Hourglass,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,6 +48,7 @@ const formatDate = (dateString?: string | null) => {
 
 export function MyQuotes({}: MyQuotesProps) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState<
     "all" | "pending" | "accepted" | "rejected"
@@ -130,14 +132,15 @@ export function MyQuotes({}: MyQuotesProps) {
         return {
           id: quote.id,
           jobId: quote.job_id,
-          jobTitle: job?.title ?? "Job",
+          jobTitle: job?.title ?? t("myQuotes.noJobDefault"),
           jobDescription: job?.description ?? "",
           clientId: jobClient?.id ?? "",
-          clientName: jobClient?.full_name ?? "Client",
+          clientName: jobClient?.full_name ?? t("myQuotes.noClientDefault"),
           clientBudget,
           location: locationValue,
           myQuoteAmount: quote.amount?.toString?.() ?? `${quote.amount ?? ""}`,
-          myTimeline: quote.estimated_duration ?? "Flexible",
+          myTimeline:
+            quote.estimated_duration ?? t("myQuotes.noTimelineDefault"),
           myMessage: quote.message ?? "",
           submittedDate: formatDate(quote.created_at),
           status,
@@ -151,7 +154,7 @@ export function MyQuotes({}: MyQuotesProps) {
     };
 
     fetchQuotes();
-  }, [user?.id]);
+  }, [t, user?.id]);
 
   const getStatusBadge = (status: Quote["status"]) => {
     switch (status) {
@@ -159,28 +162,28 @@ export function MyQuotes({}: MyQuotesProps) {
         return (
           <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">
             <Hourglass className="h-3 w-3 mr-1" />
-            Pending
+            {t("myQuotes.pending")}
           </Badge>
         );
       case "accepted":
         return (
           <Badge className="bg-green-100 text-green-700 border-green-300">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Accepted
+            {t("myQuotes.accepted")}
           </Badge>
         );
       case "rejected":
         return (
           <Badge className="bg-red-100 text-red-700 border-red-300">
             <XCircle className="h-3 w-3 mr-1" />
-            Not Selected
+            {t("myQuotes.notSelected")}
           </Badge>
         );
       case "client_messaged":
         return (
           <Badge className="bg-[#FDEFD6] text-[#F1A400] border-[#F7C876]">
             <MessageSquare className="h-3 w-3 mr-1" />
-            Client Messaged
+            {t("myQuotes.statusClientMessaged")}
           </Badge>
         );
     }
@@ -218,18 +221,16 @@ export function MyQuotes({}: MyQuotesProps) {
               className="flex items-center gap-2 text-gray-600 hover:text-[#F7C876] transition-colors mb-2"
             >
               <ArrowLeft className="h-5 w-5" />
-              Back to Dashboard
+              {t("myQuotes.backToDashboard")}
             </button>
-            <h1 className="text-3xl font-bold">My Submitted Quotes</h1>
-            <p className="text-gray-600">
-              Track and manage all your job quotes
-            </p>
+            <h1 className="text-3xl font-bold">{t("myQuotes.title")}</h1>
+            <p className="text-gray-600">{t("myQuotes.subtitle")}</p>
           </div>
           <Button
             className="bg-[#F7C876] hover:bg-[#EFA055]"
             onClick={() => navigate("/dashboard/provider/job-board")}
           >
-            Browse More Jobs
+            {t("myQuotes.browseMoreJobs")}
           </Button>
         </div>
 
@@ -250,7 +251,9 @@ export function MyQuotes({}: MyQuotesProps) {
                 <p className="text-3xl font-bold text-gray-900">
                   {quotes.length}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">Total Quotes</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {t("myQuotes.totalQuotes")}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -260,7 +263,9 @@ export function MyQuotes({}: MyQuotesProps) {
                 <p className="text-3xl font-bold text-yellow-600">
                   {pendingCount}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">Pending</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {t("myQuotes.pending")}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -270,7 +275,9 @@ export function MyQuotes({}: MyQuotesProps) {
                 <p className="text-3xl font-bold text-green-600">
                   {acceptedCount}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">Accepted</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {t("myQuotes.accepted")}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -280,7 +287,9 @@ export function MyQuotes({}: MyQuotesProps) {
                 <p className="text-3xl font-bold text-red-600">
                   {rejectedCount}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">Not Selected</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {t("myQuotes.notSelected")}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -294,15 +303,17 @@ export function MyQuotes({}: MyQuotesProps) {
               onValueChange={(v) => setSelectedTab(v as any)}
             >
               <TabsList className="grid w-full grid-cols-4 mb-6">
-                <TabsTrigger value="all">All ({quotes.length})</TabsTrigger>
+                <TabsTrigger value="all">
+                  {t("myQuotes.tabAll")} ({quotes.length})
+                </TabsTrigger>
                 <TabsTrigger value="pending">
-                  Pending ({pendingCount})
+                  {t("myQuotes.tabPending")} ({pendingCount})
                 </TabsTrigger>
                 <TabsTrigger value="accepted">
-                  Accepted ({acceptedCount})
+                  {t("myQuotes.tabAccepted")} ({acceptedCount})
                 </TabsTrigger>
                 <TabsTrigger value="rejected">
-                  Not Selected ({rejectedCount})
+                  {t("myQuotes.tabRejected")} ({rejectedCount})
                 </TabsTrigger>
               </TabsList>
 
@@ -310,20 +321,20 @@ export function MyQuotes({}: MyQuotesProps) {
                 {isLoading && (
                   <Card>
                     <CardContent className="py-12 text-center text-gray-600">
-                      Loading quotes...
+                      {t("myQuotes.loading")}
                     </CardContent>
                   </Card>
                 )}
                 {filteredQuotes.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-gray-500 mb-4">
-                      No quotes in this category
+                      {t("myQuotes.emptyCategory")}
                     </p>
                     <Button
                       className="bg-[#F7C876] hover:bg-[#EFA055]"
                       onClick={() => navigate("/dashboard/provider/job-board")}
                     >
-                      Browse Available Jobs
+                      {t("myQuotes.browseAvailable")}
                     </Button>
                   </div>
                 ) : (
@@ -356,7 +367,7 @@ export function MyQuotes({}: MyQuotesProps) {
                                   ${quote.myQuoteAmount}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  Your quote
+                                  {t("myQuotes.yourQuote")}
                                 </div>
                               </div>
                             </div>
@@ -386,7 +397,8 @@ export function MyQuotes({}: MyQuotesProps) {
                               </div>
                               <div className="flex items-center gap-1">
                                 <DollarSign className="h-4 w-4" />
-                                Client Budget: ${quote.clientBudget}
+                                {t("myQuotes.clientBudget")}: $
+                                {quote.clientBudget}
                               </div>
                               <div className="flex items-center gap-1">
                                 <MapPin className="h-4 w-4" />
@@ -394,25 +406,27 @@ export function MyQuotes({}: MyQuotesProps) {
                               </div>
                               <div className="flex items-center gap-1">
                                 <MessageSquare className="h-4 w-4" />
-                                {quote.totalQuotes} total quotes
+                                {quote.totalQuotes}{" "}
+                                {t("myQuotes.totalQuotesSuffix")}
                               </div>
                             </div>
 
                             {/* Your Quote Details */}
                             <div className="bg-gray-50 rounded-lg p-4 mb-4">
                               <h4 className="font-semibold text-gray-900 mb-2">
-                                Your Quote Details:
+                                {t("myQuotes.quoteDetails")}
                               </h4>
                               <div className="space-y-2 text-sm">
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-4 w-4 text-gray-400" />
                                   <span className="text-gray-700">
-                                    <strong>Timeline:</strong>{" "}
+                                    <strong>{t("myQuotes.timeline")}:</strong>{" "}
                                     {quote.myTimeline}
                                   </span>
                                 </div>
                                 <p className="text-gray-700 mt-2">
-                                  <strong>Message:</strong> {quote.myMessage}
+                                  <strong>{t("myQuotes.message")}:</strong>{" "}
+                                  {quote.myMessage}
                                 </p>
                               </div>
                             </div>
@@ -421,11 +435,8 @@ export function MyQuotes({}: MyQuotesProps) {
                             {quote.status === "pending" && (
                               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
                                 <p className="text-sm text-yellow-800">
-                                  ⏳{" "}
-                                  <strong>Waiting for client response.</strong>{" "}
-                                  The client is reviewing all quotes. You'll be
-                                  notified if they message you or accept your
-                                  quote.
+                                  ⏳ <strong>{t("myQuotes.pending")}</strong>.{" "}
+                                  {t("myQuotes.pendingHint")}
                                 </p>
                               </div>
                             )}
@@ -433,8 +444,7 @@ export function MyQuotes({}: MyQuotesProps) {
                             {quote.status === "client_messaged" && (
                               <div className="bg-[#FDEFD6] border border-[#F7C876] rounded-lg p-3 mb-3">
                                 <p className="text-sm text-[#F1A400]">
-                                  💬 <strong>Client reached out.</strong>{" "}
-                                  Messaging unlocks after a quote is accepted.
+                                  💬 {t("myQuotes.clientMessagedHint")}
                                 </p>
                               </div>
                             )}
@@ -442,12 +452,7 @@ export function MyQuotes({}: MyQuotesProps) {
                             {quote.status === "accepted" && (
                               <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
                                 <p className="text-sm text-green-800">
-                                  🎉{" "}
-                                  <strong>
-                                    Congratulations! Your quote was accepted.
-                                  </strong>{" "}
-                                  The client has funded the job. You can now
-                                  start work. Check your active jobs.
+                                  🎉 {t("myQuotes.acceptedHint")}
                                 </p>
                               </div>
                             )}
@@ -455,8 +460,7 @@ export function MyQuotes({}: MyQuotesProps) {
                             {quote.status === "rejected" && (
                               <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 mb-3">
                                 <p className="text-sm text-gray-700">
-                                  The client selected another provider for this
-                                  job. Keep bidding on more jobs!
+                                  {t("myQuotes.rejectedHint")}
                                 </p>
                               </div>
                             )}
@@ -466,10 +470,10 @@ export function MyQuotes({}: MyQuotesProps) {
                               {quote.status === "pending" && (
                                 <>
                                   <Button variant="outline" size="sm">
-                                    Edit Quote
+                                    {t("myQuotes.editQuote")}
                                   </Button>
                                   <Button variant="outline" size="sm">
-                                    Withdraw Quote
+                                    {t("myQuotes.withdrawQuote")}
                                   </Button>
                                 </>
                               )}
@@ -477,7 +481,7 @@ export function MyQuotes({}: MyQuotesProps) {
                               {quote.status === "client_messaged" && (
                                 <Button variant="outline" size="sm" disabled>
                                   <MessageSquare className="h-4 w-4 mr-2" />
-                                  Messaging locked
+                                  {t("myQuotes.messagingLocked")}
                                 </Button>
                               )}
 
@@ -490,12 +494,12 @@ export function MyQuotes({}: MyQuotesProps) {
                                   }
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
-                                  Go to Active Job
+                                  {t("myQuotes.goToActiveJob")}
                                 </Button>
                               )}
 
                               <Button variant="ghost" size="sm">
-                                View Full Job Details
+                                {t("myQuotes.viewFullJobDetails")}
                               </Button>
                             </div>
                           </div>

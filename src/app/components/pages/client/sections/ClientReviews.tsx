@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "../../../ui/page-header";
 import { CheckCircle, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,6 +51,7 @@ const renderStars = (rating: number) =>
 export const ClientReviews = () => {
   const { user } = useAuth();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("received");
+  const { t } = useTranslation();
 
   const receivedReviewsQuery = useSupabaseQuery(
     ["client_received_reviews", user?.id],
@@ -169,20 +171,22 @@ export const ClientReviews = () => {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 pt-6">
-      <PageHeader title="Reviews" hideBack />
+      <PageHeader title={t("clientReviews.title")} hideBack />
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-xl">Reviews</CardTitle>
+              <CardTitle className="text-xl">
+                {t("clientReviews.title")}
+              </CardTitle>
               <CardDescription className="mt-1">
-                See the feedback you have received and shared.
+                {t("clientReviews.description")}
               </CardDescription>
             </div>
 
             <div className="rounded-2xl border bg-gray-50 px-4 py-3 text-right">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                Overall rating
+                {t("clientReviews.overallRating")}
               </p>
               <div className="mt-1 flex items-center justify-end gap-2">
                 <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
@@ -191,7 +195,9 @@ export const ClientReviews = () => {
                 </span>
               </div>
               <p className="text-xs text-gray-500">
-                {receivedReviews.length} received reviews
+                {t("clientReviews.receivedCount", {
+                  count: receivedReviews.length,
+                })}
               </p>
             </div>
           </div>
@@ -216,7 +222,7 @@ export const ClientReviews = () => {
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              Received ({receivedReviews.length})
+              {t("clientReviews.tabReceived")} ({receivedReviews.length})
             </button>
             <button
               type="button"
@@ -227,15 +233,15 @@ export const ClientReviews = () => {
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              Given ({givenReviews.length})
+              {t("clientReviews.tabGiven")} ({givenReviews.length})
             </button>
           </div>
 
           {!hasReviews && !loadError && (
             <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-gray-600">
               {reviewFilter === "received"
-                ? "No received reviews yet."
-                : "No given reviews yet."}
+                ? t("clientReviews.noReceived")
+                : t("clientReviews.noGiven")}
             </div>
           )}
 
@@ -259,7 +265,7 @@ export const ClientReviews = () => {
                       {review.verified && (
                         <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
                           <CheckCircle className="h-3 w-3" />
-                          Verified review
+                          {t("clientReviews.verifiedBadge")}
                         </div>
                       )}
                     </div>
@@ -278,7 +284,9 @@ export const ClientReviews = () => {
 
                   {review.response && (
                     <div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm">
-                      <p className="font-semibold text-gray-800">Response</p>
+                      <p className="font-semibold text-gray-800">
+                        {t("clientReviews.response")}
+                      </p>
                       <p className="mt-1 text-gray-700">{review.response}</p>
                     </div>
                   )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "@/lib/router";
 import { Button } from "../../../ui/button";
 import {
@@ -13,6 +14,7 @@ import { Search } from "lucide-react";
 
 export const ClientBrowse = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [service, setService] = useState("");
   const [location, setLocation] = useState("");
 
@@ -28,19 +30,19 @@ export const ClientBrowse = () => {
     <div className="space-y-6 pt-6">
       <Card>
         <CardHeader>
-          <CardTitle>Find Service Providers</CardTitle>
-          <CardDescription>Search for local professionals</CardDescription>
+          <CardTitle>{t("clientBrowse.cardTitle")}</CardTitle>
+          <CardDescription>{t("clientBrowse.cardDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Input
-              placeholder="Service (e.g., plumbing, cleaning)"
+              placeholder={t("clientBrowse.servicePlaceholder")}
               value={service}
               onChange={(e) => setService(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             />
             <Input
-              placeholder="Location"
+              placeholder={t("clientBrowse.locationPlaceholder")}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -50,20 +52,18 @@ export const ClientBrowse = () => {
               onClick={handleSearch}
             >
               <Search className="h-4 w-4 mr-2" />
-              Search Providers
+              {t("clientBrowse.searchButton")}
             </Button>
           </div>
 
           <div className="rounded-2xl border border-[#F7C876]/60 bg-[#FFF7E8] px-6 py-10 text-center">
             <Search className="mx-auto mb-4 h-16 w-16 text-[#F1A400]" />
-            <p className="text-gray-700 mb-4">
-              Ready to find the perfect service provider?
-            </p>
+            <p className="text-gray-700 mb-4">{t("clientBrowse.readyText")}</p>
             <Button
               className="bg-[#F1A400] text-slate-950 hover:bg-[#EFA055]"
               onClick={() => navigate("/dashboard/client/providers")}
             >
-              Browse All Providers
+              {t("clientBrowse.browseAll")}
             </Button>
           </div>
         </CardContent>

@@ -14,6 +14,35 @@ export type Database = {
   };
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string;
+          updated_at: string;
+          updated_by: string | null;
+          value: Json;
+        };
+        Insert: {
+          key: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value?: Json;
+        };
+        Update: {
+          key?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          value?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       bookings: {
         Row: {
           amount: number;
@@ -147,7 +176,9 @@ export type Database = {
       };
       client_profiles: {
         Row: {
+          country: string | null;
           created_at: string | null;
+          currency: string | null;
           jobs_posted: number | null;
           notification_preferences: Json | null;
           preferred_categories: string[] | null;
@@ -157,7 +188,9 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          country?: string | null;
           created_at?: string | null;
+          currency?: string | null;
           jobs_posted?: number | null;
           notification_preferences?: Json | null;
           preferred_categories?: string[] | null;
@@ -167,7 +200,9 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          country?: string | null;
           created_at?: string | null;
+          currency?: string | null;
           jobs_posted?: number | null;
           notification_preferences?: Json | null;
           preferred_categories?: string[] | null;
@@ -510,7 +545,9 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null;
+          country: string | null;
           created_at: string | null;
+          currency: string | null;
           email: string;
           full_name: string | null;
           id: string;
@@ -526,7 +563,9 @@ export type Database = {
         };
         Insert: {
           avatar_url?: string | null;
+          country?: string | null;
           created_at?: string | null;
+          currency?: string | null;
           email: string;
           full_name?: string | null;
           id: string;
@@ -542,7 +581,9 @@ export type Database = {
         };
         Update: {
           avatar_url?: string | null;
+          country?: string | null;
           created_at?: string | null;
+          currency?: string | null;
           email?: string;
           full_name?: string | null;
           id?: string;
@@ -632,7 +673,9 @@ export type Database = {
           bio: string | null;
           business_name: string | null;
           certifications: string[] | null;
+          country: string | null;
           created_at: string | null;
+          currency: string | null;
           experience_years: number | null;
           hourly_rate: number | null;
           insurance_expiry: string | null;
@@ -660,7 +703,9 @@ export type Database = {
           bio?: string | null;
           business_name?: string | null;
           certifications?: string[] | null;
+          country?: string | null;
           created_at?: string | null;
+          currency?: string | null;
           experience_years?: number | null;
           hourly_rate?: number | null;
           insurance_expiry?: string | null;
@@ -688,7 +733,9 @@ export type Database = {
           bio?: string | null;
           business_name?: string | null;
           certifications?: string[] | null;
+          country?: string | null;
           created_at?: string | null;
+          currency?: string | null;
           experience_years?: number | null;
           hourly_rate?: number | null;
           insurance_expiry?: string | null;

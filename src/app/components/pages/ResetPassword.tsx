@@ -6,6 +6,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function ResetPassword() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
+  const { t } = useTranslation();
 
   // Supabase sends the user here with a session attached via the URL hash.
   // We wait until the auth listener picks it up before allowing the form.
@@ -40,12 +42,12 @@ export function ResetPassword() {
     setErrorMessage(null);
 
     if (password.length < 6) {
-      setErrorMessage("Password must be at least 6 characters.");
+      setErrorMessage(t("resetPassword.minLength"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage(t("resetPassword.passwordMismatch"));
       return;
     }
 
@@ -69,7 +71,9 @@ export function ResetPassword() {
   if (!sessionReady) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <p className="text-gray-500 text-sm">Verifying reset link…</p>
+        <p className="text-gray-500 text-sm">
+          {t("resetPassword.verifyingLink")}
+        </p>
       </div>
     );
   }
@@ -80,12 +84,14 @@ export function ResetPassword() {
         <Card>
           <CardHeader className="mb-4">
             <CardTitle className="text-2xl">
-              {success ? "Password updated!" : "Set a new password"}
+              {success
+                ? t("resetPassword.successTitle")
+                : t("resetPassword.title")}
             </CardTitle>
             <p className="text-muted-foreground">
               {success
-                ? "You'll be redirected to sign in shortly."
-                : "Choose a strong password for your account."}
+                ? t("resetPassword.successSubtitle")
+                : t("resetPassword.subtitle")}
             </p>
           </CardHeader>
 
@@ -96,7 +102,7 @@ export function ResetPassword() {
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  Your password has been changed. Redirecting to sign in…
+                  {t("resetPassword.successBody")}
                 </p>
               </div>
             ) : (
@@ -109,12 +115,12 @@ export function ResetPassword() {
 
                 <div>
                   <Label htmlFor="password" className="mb-3">
-                    New Password
+                    {t("resetPassword.newPassword")}
                   </Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("resetPassword.newPasswordPlaceholder")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -124,12 +130,12 @@ export function ResetPassword() {
 
                 <div>
                   <Label htmlFor="confirmPassword" className="mb-3">
-                    Confirm New Password
+                    {t("resetPassword.confirmPassword")}
                   </Label>
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder={t("resetPassword.confirmPasswordPlaceholder")}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
@@ -141,7 +147,9 @@ export function ResetPassword() {
                   disabled={isSubmitting}
                   className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6"
                 >
-                  {isSubmitting ? "Updating…" : "Update Password"}
+                  {isSubmitting
+                    ? t("resetPassword.submitting")
+                    : t("resetPassword.button")}
                 </Button>
               </form>
             )}

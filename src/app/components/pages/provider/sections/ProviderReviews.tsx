@@ -1,4 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useProviderDashboard } from "../ProviderDashboardContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -30,6 +31,7 @@ type ReviewFilter = "received" | "given";
 
 export const ProviderReviews = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const {
     providerData,
     reviews,
@@ -80,17 +82,17 @@ export const ProviderReviews = () => {
 
       return {
         id: review.id,
-        reviewee: reviewee?.full_name ?? "Client",
+        reviewee: reviewee?.full_name ?? t("providerJobs.client"),
         rating: review.rating ?? 0,
         date: review.created_at
           ? new Date(review.created_at).toLocaleDateString("en-CA")
           : "",
-        service: booking?.service_type ?? "Service",
+        service: booking?.service_type ?? t("providerJobs.service"),
         comment: review.comment ?? "",
         verified: review.is_verified ?? false,
       };
     });
-  }, [givenReviewsResult]);
+  }, [givenReviewsResult, t]);
 
   const activeReviews = reviewFilter === "received" ? reviews : givenReviews;
   const hasReviews = activeReviews.length > 0;
@@ -99,10 +101,10 @@ export const ProviderReviews = () => {
     <>
       <div className="space-y-6 pt-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <PageHeader title="Reviews" hideBack />
+          <PageHeader title={t("providerReviews.title")} hideBack />
           <div className="rounded-2xl border bg-gray-50 px-4 py-3 text-right">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-              Overall rating
+              {t("providerReviews.overallRating")}
             </p>
             <div className="mt-1 flex items-center justify-end gap-2">
               <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
@@ -111,7 +113,9 @@ export const ProviderReviews = () => {
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              {providerData.totalReviews} received reviews
+              {t("providerReviews.receivedReviews", {
+                count: providerData.totalReviews,
+              })}
             </p>
           </div>
         </div>
@@ -128,7 +132,7 @@ export const ProviderReviews = () => {
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                Received ({reviews.length})
+                {t("providerReviews.tabReceived")} ({reviews.length})
               </button>
               <button
                 type="button"
@@ -139,15 +143,15 @@ export const ProviderReviews = () => {
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                Given ({givenReviews.length})
+                {t("providerReviews.tabGiven")} ({givenReviews.length})
               </button>
             </div>
 
             {!hasReviews && (
               <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-gray-600">
                 {reviewFilter === "received"
-                  ? "No received reviews yet."
-                  : "No given reviews yet."}
+                  ? t("providerReviews.noReceived")
+                  : t("providerReviews.noGiven")}
               </div>
             )}
 
@@ -172,7 +176,7 @@ export const ProviderReviews = () => {
                           {review.verified && (
                             <div className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
                               <CheckCircle className="h-3 w-3" />
-                              Verified review
+                              {t("providerReviews.verifiedReview")}
                             </div>
                           )}
                         </div>
@@ -202,7 +206,7 @@ export const ProviderReviews = () => {
                     {reviewFilter === "received" && review.response && (
                       <div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm">
                         <p className="font-semibold text-gray-800">
-                          Your Response
+                          {t("providerReviews.yourResponse")}
                         </p>
                         <p className="mt-1 text-gray-700">{review.response}</p>
                       </div>
@@ -219,7 +223,7 @@ export const ProviderReviews = () => {
                             setResponseDialogOpen(true);
                           }}
                         >
-                          Respond to review
+                          {t("providerReviews.respondToReview")}
                         </Button>
                       </div>
                     )}
@@ -234,9 +238,11 @@ export const ProviderReviews = () => {
       <Dialog open={responseDialogOpen} onOpenChange={setResponseDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Respond to Review</DialogTitle>
+            <DialogTitle>{t("providerReviews.respondDialogTitle")}</DialogTitle>
             <DialogDescription>
-              Share a public response to {selectedReview?.client}.
+              {t("providerReviews.respondDialogDesc", {
+                name: selectedReview?.client,
+              })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -245,7 +251,7 @@ export const ProviderReviews = () => {
               onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                 setResponseText(event.target.value)
               }
-              placeholder="Write your response..."
+              placeholder={t("providerReviews.responsePlaceholder")}
               className="min-h-[140px]"
             />
             <div className="flex gap-3">
@@ -254,14 +260,14 @@ export const ProviderReviews = () => {
                 className="flex-1"
                 onClick={() => setResponseDialogOpen(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 className="flex-1 bg-[#F1A400] text-slate-950 hover:bg-[#EFA055]"
                 onClick={handleSubmitResponse}
                 disabled={!responseText.trim()}
               >
-                Submit Response
+                {t("providerReviews.submitResponse")}
               </Button>
             </div>
           </div>

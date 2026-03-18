@@ -31,6 +31,7 @@ import {
 import { useServiceCategories } from "@/lib/useServiceCategories";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 interface JobDetailsProps {
   jobId?: string | null;
@@ -79,11 +80,11 @@ type Quote = {
   status: "pending" | "accepted" | "rejected" | "client_messaged" | "withdrawn";
 };
 
-const formatDate = (dateString?: string | null) => {
+const formatDate = (dateString?: string | null, locale = "en-US") => {
   if (!dateString) return "";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString(locale);
 };
 
 const getLocationLabel = (location: unknown) => {
@@ -96,6 +97,7 @@ const getLocationLabel = (location: unknown) => {
 };
 
 export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { categories } = useServiceCategories();
@@ -218,20 +220,20 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
       return {
         id: quote.id,
         providerId: quote.provider_id,
-        providerName: provider?.full_name ?? "Service Provider",
+        providerName: provider?.full_name ?? t("jobDetails.serviceProvider"),
         providerRating: providerProfile?.rating ?? 0,
         providerJobs: providerProfile?.jobs_completed ?? 0,
         amount: quote.amount?.toString?.() ?? `${quote.amount ?? ""}`,
-        timeline: quote.estimated_duration ?? "Flexible",
+        timeline: quote.estimated_duration ?? t("jobDetails.flexible"),
         message: quote.message ?? "",
-        submittedDate: formatDate(quote.created_at),
+        submittedDate: formatDate(quote.created_at, i18n.language),
         status: (quote.status ?? "pending") as Quote["status"],
       };
     });
 
     setQuotes(mappedQuotes);
     setQuotesLoading(false);
-  }, [jobId, user?.id]);
+  }, [i18n.language, jobId, t, user?.id]);
 
   useEffect(() => {
     fetchJob();
@@ -277,12 +279,12 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
     event.preventDefault();
 
     if (!user?.id || !jobId) {
-      setErrorMessage("You must be signed in to edit this job.");
+      setErrorMessage(t("jobDetails.errors.mustSignInToEdit"));
       return;
     }
 
     if (!isEditable) {
-      setErrorMessage("This job can no longer be edited.");
+      setErrorMessage(t("jobDetails.errors.notEditable"));
       return;
     }
 
@@ -339,7 +341,9 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
       );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to update job.";
+        error instanceof Error
+          ? error.message
+          : t("jobDetails.errors.updateJob");
       setErrorMessage(message);
     } finally {
       setIsSaving(false);
@@ -348,7 +352,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
 
   const handleAcceptQuote = async (quote: Quote) => {
     if (!user?.id || !jobId || !job) {
-      setErrorMessage("You must be signed in to accept a quote.");
+      setErrorMessage(t("jobDetails.errors.mustSignInToAccept"));
       return;
     }
 
@@ -364,14 +368,16 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
       await Promise.all([fetchJob(), fetchQuotes()]);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to accept quote.";
+        error instanceof Error
+          ? error.message
+          : t("jobDetails.errors.acceptQuote");
       setErrorMessage(message);
     }
   };
 
   const handleSendMessage = async () => {
     if (!user?.id || !selectedQuote?.providerId || !jobId) {
-      setErrorMessage("Unable to send message. Please try again.");
+      setErrorMessage(t("jobDetails.errors.sendMessage"));
       return;
     }
 
@@ -396,7 +402,9 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
       setMessageText("");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to send message.";
+        error instanceof Error
+          ? error.message
+          : t("jobDetails.errors.sendMessageFailed");
       setErrorMessage(message);
     }
   };
@@ -404,7 +412,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
   if (isLoading) {
     return (
       <div>
-        <div className="text-gray-600">Loading job...</div>
+        <div className="text-gray-600">{t("jobDetails.loadingJob")}</div>
       </div>
     );
   }
@@ -414,14 +422,14 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
       <div>
         <div>
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errorMessage ?? "Job not found."}
+            {errorMessage ?? t("jobDetails.errors.notFound")}
           </div>
           <div className="mt-6">
             <Button
               variant="outline"
               onClick={() => navigate("/dashboard/client/my-jobs")}
             >
-              Back to My Jobs
+              {t("jobDetails.backToMyJobs")}
             </Button>
           </div>
         </div>
@@ -436,19 +444,19 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
 
   const statusConfig: Record<string, { label: string; className: string }> = {
     open: {
-      label: "Open",
+      label: t("jobDetails.status.open"),
       className: "bg-blue-100 text-blue-700 border-blue-200",
     },
     accepted: {
-      label: "Accepted",
+      label: t("jobDetails.status.accepted"),
       className: "bg-green-100 text-green-700 border-green-200",
     },
     in_progress: {
-      label: "In Progress",
+      label: t("jobDetails.status.inProgress"),
       className: "bg-amber-100 text-amber-700 border-amber-200",
     },
     completed: {
-      label: "Completed",
+      label: t("jobDetails.status.completed"),
       className: "bg-gray-100 text-gray-700 border-gray-200",
     },
   };
@@ -460,7 +468,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
   const content = (
     <div className="space-y-6 py-6 max-w-5xl">
       <PageHeader
-        title={isEditing ? "Edit Job" : job.title}
+        title={isEditing ? t("jobDetails.editJob") : job.title}
         backTo="/dashboard/client/my-jobs"
         actions={
           !isEditing ? (
@@ -471,7 +479,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                 onClick={() => setIsEditing(true)}
               >
                 <Pencil className="h-4 w-4 mr-2" />
-                Edit Job
+                {t("jobDetails.editJob")}
               </Button>
             ) : undefined
           ) : (
@@ -481,7 +489,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
               onClick={() => setIsEditing(false)}
             >
               <X className="h-4 w-4 mr-2" />
-              Cancel
+              {t("common.cancel")}
             </Button>
           )
         }
@@ -495,24 +503,23 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
 
       {!isEditable && !isEditing && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          This job can no longer be edited because it has been accepted or is in
-          progress.
+          {t("jobDetails.notEditableNotice")}
         </div>
       )}
 
       {isEditing ? (
         <Card>
           <CardHeader>
-            {/* <CardTitle>Edit Job Details</CardTitle> */}
             <p className="text-sm text-gray-500 mt-1">
-              Update the details below and save your changes.
+              {t("jobDetails.editDescription")}
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSave} className="space-y-5 max-w-3xl">
               <div>
                 <Label htmlFor="title" className="mb-1.5 block">
-                  Job Title <span className="text-red-600">*</span>
+                  {t("jobDetails.jobTitle")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Input
                   id="title"
@@ -526,7 +533,8 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
 
               <div>
                 <Label htmlFor="category" className="mb-1.5 block">
-                  Service Category <span className="text-red-600">*</span>
+                  {t("jobDetails.serviceCategory")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <select
                   id="category"
@@ -537,7 +545,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                   }
                   required
                 >
-                  <option value="">Select a category</option>
+                  <option value="">{t("jobDetails.selectCategory")}</option>
                   {categories.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.name}
@@ -548,7 +556,8 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
 
               <div>
                 <Label htmlFor="description" className="mb-1.5 block">
-                  Job Description <span className="text-red-600">*</span>
+                  {t("jobDetails.jobDescription")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <Textarea
                   id="description"
@@ -567,7 +576,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="budgetType" className="mb-1.5 block">
-                    Budget Type
+                    {t("jobDetails.budgetType")}
                   </Label>
                   <select
                     id="budgetType"
@@ -580,13 +589,18 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                       })
                     }
                   >
-                    <option value="fixed">Fixed Price</option>
-                    <option value="hourly">Hourly Rate</option>
+                    <option value="fixed">
+                      {t("jobDetails.budgetTypeOptions.fixed")}
+                    </option>
+                    <option value="hourly">
+                      {t("jobDetails.budgetTypeOptions.hourly")}
+                    </option>
                   </select>
                 </div>
                 <div>
                   <Label htmlFor="budget" className="mb-1.5 block">
-                    Estimated Budget <span className="text-red-600">*</span>
+                    {t("jobDetails.estimatedBudget")}{" "}
+                    <span className="text-red-600">*</span>
                   </Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -609,7 +623,8 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
 
               <div>
                 <Label htmlFor="location" className="mb-1.5 block">
-                  Job Location <span className="text-red-600">*</span>
+                  {t("jobDetails.jobLocation")}{" "}
+                  <span className="text-red-600">*</span>
                 </Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -631,7 +646,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="urgency" className="mb-1.5 block">
-                    Urgency Level
+                    {t("jobDetails.urgencyLevel")}
                   </Label>
                   <select
                     id="urgency"
@@ -644,13 +659,17 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                       })
                     }
                   >
-                    <option value="flexible">Flexible Timeline</option>
-                    <option value="urgent">Urgent (ASAP)</option>
+                    <option value="flexible">
+                      {t("jobDetails.urgencyOptions.flexible")}
+                    </option>
+                    <option value="urgent">
+                      {t("jobDetails.urgencyOptions.urgent")}
+                    </option>
                   </select>
                 </div>
                 <div>
                   <Label htmlFor="preferredDate" className="mb-1.5 block">
-                    Preferred Start Date
+                    {t("jobDetails.preferredStartDate")}
                   </Label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -678,7 +697,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                   onClick={() => setIsEditing(false)}
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -686,7 +705,9 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                   disabled={isSaving}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  {isSaving
+                    ? t("jobDetails.saving")
+                    : t("jobDetails.saveChanges")}
                 </Button>
               </div>
             </form>
@@ -704,7 +725,9 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                   {job.title}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Posted {formatDate(job.created_at)}
+                  {t("jobDetails.posted", {
+                    date: formatDate(job.created_at, i18n.language),
+                  })}
                 </p>
               </div>
               <Badge
@@ -720,13 +743,15 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                 <DollarSign className="h-5 w-5 text-[#C17A00] mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Budget
+                    {t("jobDetails.budget")}
                   </p>
                   <p className="font-semibold text-gray-900 truncate">
                     ${budgetDisplay}
                   </p>
                   <p className="text-xs text-gray-400 capitalize">
-                    {job.metadata?.budgetType ?? "fixed"}
+                    {(job.metadata?.budgetType ?? "fixed") === "fixed"
+                      ? t("jobDetails.budgetTypeOptions.fixed")
+                      : t("jobDetails.budgetTypeOptions.hourly")}
                   </p>
                 </div>
               </div>
@@ -734,10 +759,11 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                 <MapPin className="h-5 w-5 text-[#C17A00] mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Location
+                    {t("jobDetails.location")}
                   </p>
                   <p className="font-semibold text-gray-900 truncate">
-                    {getLocationLabel(job.location) || "—"}
+                    {getLocationLabel(job.location) ||
+                      t("jobDetails.notAvailable")}
                   </p>
                 </div>
               </div>
@@ -745,10 +771,11 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                 <Calendar className="h-5 w-5 text-[#C17A00] mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Preferred Date
+                    {t("jobDetails.preferredDate")}
                   </p>
                   <p className="font-semibold text-gray-900">
-                    {formatDate(job.preferred_date) || "Flexible"}
+                    {formatDate(job.preferred_date, i18n.language) ||
+                      t("jobDetails.flexible")}
                   </p>
                 </div>
               </div>
@@ -760,17 +787,19 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                 )}
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Urgency
+                    {t("jobDetails.urgency")}
                   </p>
                   <p className="font-semibold text-gray-900 capitalize">
-                    {job.urgency ?? "Flexible"}
+                    {job.urgency === "urgent"
+                      ? t("jobDetails.urgencyOptions.urgent")
+                      : t("jobDetails.urgencyOptions.flexible")}
                   </p>
                 </div>
               </div>
             </div>
             <div className="border-t border-gray-100 pt-5">
               <p className="text-sm font-semibold text-gray-700 mb-2">
-                Description
+                {t("jobDetails.description")}
               </p>
               <p className="text-gray-600 whitespace-pre-wrap leading-relaxed text-sm">
                 {job.description}
@@ -783,9 +812,9 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
       {!isEditing && (
         <Card>
           <CardHeader>
-            <CardTitle>Quotes</CardTitle>
+            <CardTitle>{t("jobDetails.quotes")}</CardTitle>
             <p className="text-sm text-gray-500 mt-1">
-              Review provider offers for this job
+              {t("jobDetails.reviewOffers")}
             </p>
           </CardHeader>
           <CardContent>
@@ -798,7 +827,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
             {quotesLoading && (
               <Card className="border border-gray-200/80 animate-pulse">
                 <CardContent className="py-8 text-center text-gray-600">
-                  Loading quotes...
+                  {t("jobDetails.loadingQuotes")}
                 </CardContent>
               </Card>
             )}
@@ -806,7 +835,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
             {!quotesLoading && quotes.length === 0 && (
               <Card className="border border-dashed border-[#F7C876]/60 bg-[#FDEFD6]/30">
                 <CardContent className="py-8 text-center text-gray-600">
-                  No quotes yet. Providers will respond soon.
+                  {t("jobDetails.noQuotes")}
                 </CardContent>
               </Card>
             )}
@@ -855,7 +884,9 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                                     </div>
                                     <span>•</span>
                                     <span>
-                                      {quote.providerJobs} jobs completed
+                                      {t("jobDetails.jobsCompleted", {
+                                        count: quote.providerJobs,
+                                      })}
                                     </span>
                                   </div>
                                 </div>
@@ -864,7 +895,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                                     ${quote.amount}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    Commission:{" "}
+                                    {t("jobDetails.commission")}:{" "}
                                     {parseFloat(quote.amount) > 500
                                       ? "3.5%"
                                       : "5%"}
@@ -876,7 +907,10 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                                 <Calendar className="h-4 w-4" />
                                 <span>{quote.timeline}</span>
                                 <span className="text-gray-400">
-                                  • Submitted {quote.submittedDate}
+                                  •{" "}
+                                  {t("jobDetails.submitted", {
+                                    date: quote.submittedDate,
+                                  })}
                                 </span>
                               </div>
 
@@ -887,7 +921,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                               <div className="flex gap-2 flex-wrap">
                                 {quote.status === "accepted" && (
                                   <Badge className="bg-green-100 text-green-700 border-green-200 font-medium">
-                                    Accepted
+                                    {t("jobDetails.status.accepted")}
                                   </Badge>
                                 )}
                                 {canAccept && (
@@ -896,7 +930,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                                     onClick={() => handleAcceptQuote(quote)}
                                   >
                                     <CheckCircle className="h-4 w-4 mr-2" />
-                                    Accept Quote
+                                    {t("jobDetails.acceptQuote")}
                                   </Button>
                                 )}
 
@@ -915,18 +949,22 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                                         onClick={() => setSelectedQuote(quote)}
                                       >
                                         <MessageSquare className="h-4 w-4 mr-2" />
-                                        Message Provider
+                                        {t("jobDetails.messageProvider")}
                                       </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                       <DialogHeader>
                                         <DialogTitle>
-                                          Message {quote.providerName}
+                                          {t("jobDetails.messageProviderName", {
+                                            name: quote.providerName,
+                                          })}
                                         </DialogTitle>
                                       </DialogHeader>
                                       <div className="space-y-4 mt-4">
                                         <Textarea
-                                          placeholder="Type your message here..."
+                                          placeholder={t(
+                                            "jobDetails.messagePlaceholder",
+                                          )}
                                           value={messageText}
                                           onChange={(e) =>
                                             setMessageText(e.target.value)
@@ -942,14 +980,14 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                                               setMessageText("");
                                             }}
                                           >
-                                            Cancel
+                                            {t("common.cancel")}
                                           </Button>
                                           <Button
                                             className="flex-1 bg-[#F7C876] hover:bg-[#EFA055]"
                                             onClick={handleSendMessage}
                                             disabled={!messageText.trim()}
                                           >
-                                            Send Message
+                                            {t("jobDetails.sendMessage")}
                                           </Button>
                                         </div>
                                       </div>
@@ -962,7 +1000,7 @@ export function JobDetails({ jobId: propJobId }: JobDetailsProps) {
                                     to="/dashboard/client/profile/$userId"
                                     params={{ userId: quote.providerId }}
                                   >
-                                    View Profile
+                                    {t("jobDetails.viewProfile")}
                                   </Link>
                                 </Button>
                               </div>

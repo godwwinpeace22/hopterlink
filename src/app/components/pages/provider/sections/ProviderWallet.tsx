@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -130,6 +131,7 @@ const getNextPayoutDate = () => {
 export const ProviderWallet = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
@@ -301,8 +303,8 @@ export const ProviderWallet = () => {
         status: payment.status,
         description:
           payment.metadata?.payment_kind === "booking_bonus"
-            ? `Booking Bonus • ${payment.booking?.service_type ?? "Service"} • ${payment.client?.full_name ?? "Client"}`
-            : `${payment.booking?.service_type ?? "Service"} • ${payment.client?.full_name ?? "Client"}`,
+            ? `Booking Bonus • ${payment.booking?.service_type ?? t("providerJobs.service")} • ${payment.client?.full_name ?? t("providerJobs.client")}`
+            : `${payment.booking?.service_type ?? t("providerJobs.service")} • ${payment.client?.full_name ?? t("providerJobs.client")}`,
         createdAt: payment.created_at ?? new Date().toISOString(),
       }),
     );
@@ -313,7 +315,7 @@ export const ProviderWallet = () => {
         amount: -Math.abs(request.amount),
         type: "withdrawal",
         status: request.status,
-        description: "Withdrawal request",
+        description: t("providerWallet.withdrawDialogTitle"),
         createdAt: request.requestedAt,
       }));
 
@@ -322,7 +324,7 @@ export const ProviderWallet = () => {
         new Date(second.createdAt).getTime() -
         new Date(first.createdAt).getTime(),
     );
-  }, [payments, withdrawalRequests]);
+  }, [payments, t, withdrawalRequests]);
 
   const canWithdraw =
     walletMetadata.bankAccount?.verified &&
@@ -337,24 +339,26 @@ export const ProviderWallet = () => {
     const amount = Number(withdrawAmount);
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Enter a valid withdrawal amount.");
+      toast.error(t("clientWallet.invalidAmount"));
       return;
     }
 
     if (amount < WALLET_CONFIG.minimumWithdrawalAmount) {
       toast.error(
-        `Minimum withdrawal is ${formatAmount(WALLET_CONFIG.minimumWithdrawalAmount)}.`,
+        t("providerWallet.minimumWithdrawal", {
+          amount: formatAmount(WALLET_CONFIG.minimumWithdrawalAmount),
+        }),
       );
       return;
     }
 
     if (!walletMetadata.bankAccount?.verified) {
-      toast.error("Add and verify your bank account in Settings first.");
+      toast.error(t("providerWallet.bankRequired"));
       return;
     }
 
     if (amount > availableBalance) {
-      toast.error("Withdrawal amount exceeds available balance.");
+      toast.error(t("providerWallet.exceedsAvailable"));
       return;
     }
 
@@ -376,10 +380,12 @@ export const ProviderWallet = () => {
       });
       setWithdrawAmount("");
       setWithdrawDialogOpen(false);
-      toast.success("Withdrawal request submitted for payout processing.");
+      toast.success(t("providerWallet.requestSubmitted"));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to submit request.";
+        error instanceof Error
+          ? error.message
+          : t("providerWallet.submitRequestFailed");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -388,11 +394,13 @@ export const ProviderWallet = () => {
 
   return (
     <div className="space-y-6 pt-6">
-      <PageHeader title="Wallet" hideBack />
+      <PageHeader title={t("providerWallet.title")} hideBack />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Available Balance</CardDescription>
+            <CardDescription>
+              {t("providerWallet.availableBalance")}
+            </CardDescription>
             <CardTitle className="text-3xl">
               {formatAmount(availableBalance)}
             </CardTitle>
@@ -400,11 +408,12 @@ export const ProviderWallet = () => {
           <CardContent className="flex flex-wrap gap-3">
             <Badge variant="secondary" className="gap-1">
               <Wallet className="h-3.5 w-3.5" />
-              Pending {formatAmount(pendingEarnings)}
+              {t("providerWallet.pendingBalance")}{" "}
+              {formatAmount(pendingEarnings)}
             </Badge>
             <Badge variant="secondary" className="gap-1">
               <CalendarClock className="h-3.5 w-3.5" />
-              Next auto run: {getNextPayoutDate()}
+              {t("providerWallet.nextAutoRun")}: {getNextPayoutDate()}
             </Badge>
             <Dialog
               open={withdrawDialogOpen}
@@ -413,15 +422,16 @@ export const ProviderWallet = () => {
               <DialogTrigger asChild>
                 <Button disabled={!canWithdraw}>
                   <ArrowUpRight className="mr-2 h-4 w-4" />
-                  Withdraw funds
+                  {t("providerWallet.withdrawFunds")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Request Withdrawal</DialogTitle>
+                  <DialogTitle>
+                    {t("providerWallet.withdrawDialogTitle")}
+                  </DialogTitle>
                   <DialogDescription>
-                    Withdrawals are reviewed and paid manually by operations for
-                    now.
+                    {t("providerWallet.withdrawalsReviewed")}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -444,11 +454,11 @@ export const ProviderWallet = () => {
 
                     {exceedsAvailableBalance && (
                       <p className="text-sm font-medium text-red-600">
-                        Amount exceeds your available balance.
+                        {t("providerWallet.amountExceedsAvailable")}
                       </p>
                     )}
                     <div className="rounded-md max-w-fit bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                      Available now:{" "}
+                      {t("providerWallet.availableNow")}:{" "}
                       <span className="font-semibold text-foreground">
                         {formatAmount(availableBalance)}
                       </span>
@@ -461,7 +471,7 @@ export const ProviderWallet = () => {
                     variant="outline"
                     onClick={() => setWithdrawDialogOpen(false)}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button
                     disabled={
@@ -469,7 +479,9 @@ export const ProviderWallet = () => {
                     }
                     onClick={handleWithdraw}
                   >
-                    {isSubmitting ? "Submitting..." : "Submit withdrawal"}
+                    {isSubmitting
+                      ? t("providerWallet.withdrawalSubmitting")
+                      : t("providerWallet.submitWithdrawal")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -479,26 +491,31 @@ export const ProviderWallet = () => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Released Earnings</CardDescription>
+            <CardDescription>
+              {t("providerWallet.totalReleasedEarnings")}
+            </CardDescription>
             <CardTitle>{formatAmount(releasedEarnings)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center text-sm text-muted-foreground gap-1">
               <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-              Lifetime settled earnings
+              {t("providerWallet.lifetimeSettled")}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Earnings This Month</CardDescription>
+            <CardDescription>
+              {t("providerWallet.earningsThisMonth")}
+            </CardDescription>
             <CardTitle>{formatAmount(thisMonthEarnings)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center text-sm text-muted-foreground gap-1">
               <Banknote className="h-4 w-4 text-amber-600" />
-              Pending release: {formatAmount(pendingEarnings)}
+              {t("providerWallet.pendingRelease")}:{" "}
+              {formatAmount(pendingEarnings)}
             </div>
           </CardContent>
         </Card>
@@ -512,18 +529,20 @@ export const ProviderWallet = () => {
 
       <Tabs defaultValue="transactions" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="transactions">
+            {t("clientWallet.transactionsTab")}
+          </TabsTrigger>
           <TabsTrigger value="withdrawal-requests">
-            Withdrawal Requests
+            {t("providerWallet.withdrawalTab")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions">
           <Card>
             <CardHeader>
-              <CardTitle>Transaction History</CardTitle>
+              <CardTitle>{t("providerWallet.transactionTitle")}</CardTitle>
               <CardDescription>
-                Earnings, top-ups, and withdrawals in a single ledger view.
+                {t("providerWallet.transactionDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -538,17 +557,21 @@ export const ProviderWallet = () => {
                 </div>
               ) : allTransactions.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No wallet transactions yet.
+                  {t("providerWallet.noTransactions")}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>{t("providerWallet.colDate")}</TableHead>
+                      <TableHead>
+                        {t("providerWallet.colDescription")}
+                      </TableHead>
+                      <TableHead>{t("providerWallet.colType")}</TableHead>
+                      <TableHead>{t("providerWallet.colStatus")}</TableHead>
+                      <TableHead className="text-right">
+                        {t("providerWallet.colAmount")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -601,9 +624,9 @@ export const ProviderWallet = () => {
         <TabsContent value="withdrawal-requests">
           <Card>
             <CardHeader>
-              <CardTitle>Withdrawal Requests</CardTitle>
+              <CardTitle>{t("providerWallet.withdrawalTitle")}</CardTitle>
               <CardDescription>
-                Track submitted withdrawals and payout processing status.
+                {t("providerWallet.withdrawalDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -618,16 +641,16 @@ export const ProviderWallet = () => {
                 </div>
               ) : withdrawalRequests.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No withdrawals yet.
+                  {t("providerWallet.noWithdrawals")}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Reference</TableHead>
+                      <TableHead>{t("providerWallet.colDate")}</TableHead>
+                      <TableHead>{t("providerWallet.colAmount")}</TableHead>
+                      <TableHead>{t("providerWallet.colStatus")}</TableHead>
+                      <TableHead>{t("providerWallet.colReference")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -663,9 +686,11 @@ export const ProviderWallet = () => {
       </Tabs>
 
       <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-        Auto requests run every {WALLET_CONFIG.payoutDayLabel} (
-        {WALLET_CONFIG.timezone}). Minimum withdrawal is{" "}
-        {formatAmount(WALLET_CONFIG.minimumWithdrawalAmount)}.
+        {t("providerWallet.autoRequestNote", {
+          day: WALLET_CONFIG.payoutDayLabel,
+          timezone: WALLET_CONFIG.timezone,
+          amount: formatAmount(WALLET_CONFIG.minimumWithdrawalAmount),
+        })}
       </div>
     </div>
   );

@@ -1,23 +1,25 @@
 import { Link, useLocation } from "@/lib/router";
 import { User, Briefcase } from "lucide-react";
-
-const tabs = [
-  {
-    to: "/client-signup",
-    label: "I need a service",
-    sublabel: "Client",
-    icon: User,
-  },
-  {
-    to: "/provider-signup",
-    label: "I offer services",
-    sublabel: "Provider",
-    icon: Briefcase,
-  },
-] as const;
+import { useTranslation } from "react-i18next";
 
 export function SignupTabs() {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
+
+  const tabs = [
+    {
+      to: "/client-signup" as const,
+      label: "I need a service",
+      sublabel: t("signupTabs.client"),
+      icon: User,
+    },
+    {
+      to: "/provider-signup" as const,
+      label: "I offer services",
+      sublabel: t("signupTabs.provider"),
+      icon: Briefcase,
+    },
+  ];
 
   return (
     <div className="flex rounded-xl bg-gray-100 p-1 mb-6">

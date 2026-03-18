@@ -37,9 +37,12 @@ const formatDate = (dateString?: string | null) => {
 const getFirst = <T>(value: T | T[] | null | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
-export function useProviderGetJobs(userId?: string | null) {
+export function useProviderGetJobs(
+  userId?: string | null,
+  country?: string | null,
+) {
   const query = useQuery({
-    queryKey: ["provider-job-board", userId],
+    queryKey: ["provider-job-board", userId, country],
     queryFn: async () => {
       const [{ data: myQuotes, error: quotesError }, { data, error }] =
         await Promise.all([
@@ -69,7 +72,8 @@ export function useProviderGetJobs(userId?: string | null) {
               metadata,
               client:profiles!jobs_client_id_fkey (
                 id,
-                full_name
+                full_name,
+                country
               )
             `,
             )
@@ -104,7 +108,12 @@ export function useProviderGetJobs(userId?: string | null) {
         }
       }
 
-      return (data ?? []).map((job) => {
+      const jobs: ProviderJob[] = [];
+
+      for (const job of data ?? []) {
+        const client = getFirst(job.client);
+        if (country && client?.country && client.country !== country) continue;
+
         const budgetMin = job.budget_min ?? null;
         const budgetMax = job.budget_max ?? null;
         const budget =
@@ -115,6 +124,7 @@ export function useProviderGetJobs(userId?: string | null) {
               : budgetMax
                 ? `${budgetMax}`
                 : "";
+
         const metadata =
           job.metadata &&
           typeof job.metadata === "object" &&
@@ -123,6 +133,7 @@ export function useProviderGetJobs(userId?: string | null) {
             : null;
         const budgetType =
           metadata?.budgetType === "hourly" ? "hourly" : "fixed";
+
         const locationValue =
           job.location &&
           typeof job.location === "object" &&
@@ -132,11 +143,10 @@ export function useProviderGetJobs(userId?: string | null) {
               "")
             : "";
 
-        const client = getFirst(job.client);
         const providerQuote = latestQuoteByJob.get(job.id) ?? null;
         const hasQuoted = Boolean(providerQuote);
 
-        return {
+        jobs.push({
           id: job.id,
           clientId: client?.id ?? "",
           title: job.title,
@@ -162,8 +172,10 @@ export function useProviderGetJobs(userId?: string | null) {
                 status: providerQuote.status ?? null,
               }
             : null,
-        } satisfies ProviderJob;
-      });
+        });
+      }
+
+      return jobs;
     },
   });
 

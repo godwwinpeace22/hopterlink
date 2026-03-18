@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowDownLeft, ArrowUpRight, Plus, Wallet } from "lucide-react";
 import { useLocation, useNavigate } from "@/lib/router";
 import { toast } from "sonner";
@@ -89,6 +90,7 @@ export const ClientWallet = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [topupDialogOpen, setTopupDialogOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
@@ -145,12 +147,12 @@ export const ClientWallet = () => {
     }
 
     if (topupResult === "success") {
-      toast.success("Payment received. Wallet balance will update shortly.");
+      toast.success(t("clientWallet.topupSuccess"));
       refreshTopups();
     }
 
     if (topupResult === "cancel") {
-      toast.message("Top-up was canceled.");
+      toast.message(t("clientWallet.topupCancelled"));
     }
 
     params.delete("topup");
@@ -245,21 +247,21 @@ export const ClientWallet = () => {
 
   const handleTopupRequest = async () => {
     if (!user?.id) {
-      toast.error("User not found.");
+      toast.error(t("clientWallet.userNotFound"));
       return;
     }
 
     const amount = Number(topupAmount);
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Enter a valid top-up amount.");
+      toast.error(t("clientWallet.invalidAmount"));
       return;
     }
 
     const amountCents = Math.round(amount * 100);
 
     if (amountCents <= 0) {
-      toast.error("Enter a valid top-up amount.");
+      toast.error(t("clientWallet.invalidAmount"));
       return;
     }
 
@@ -276,7 +278,7 @@ export const ClientWallet = () => {
       window.location.assign(checkout.checkoutUrl);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to create top-up.";
+        error instanceof Error ? error.message : t("clientWallet.topupFailed");
       toast.error(message);
     }
   };
@@ -286,7 +288,7 @@ export const ClientWallet = () => {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Wallet Balance</CardDescription>
+            <CardDescription>{t("clientWallet.balance")}</CardDescription>
             <CardTitle className="text-3xl">
               {formatAmount(availableBalance)}
             </CardTitle>
@@ -296,21 +298,23 @@ export const ClientWallet = () => {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Top up wallet
+                  {t("clientWallet.topupBtn")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Top up wallet</DialogTitle>
+                  <DialogTitle>
+                    {t("clientWallet.topupDialogTitle")}
+                  </DialogTitle>
                   <DialogDescription>
-                    Enter an amount to continue to Stripe checkout.
+                    {t("clientWallet.topupDialogDesc")}
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="topup-amount">
-                      Amount ({WALLET_CONFIG.currency})
+                      {t("clientWallet.topupAmountLabel")}
                     </Label>
                     <Input
                       id="topup-amount"
@@ -319,7 +323,7 @@ export const ClientWallet = () => {
                       step="0.01"
                       value={topupAmount}
                       onChange={(event) => setTopupAmount(event.target.value)}
-                      placeholder="100"
+                      placeholder={t("clientWallet.topupAmountPlaceholder")}
                     />
                   </div>
                 </div>
@@ -329,15 +333,15 @@ export const ClientWallet = () => {
                     variant="outline"
                     onClick={() => setTopupDialogOpen(false)}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button
                     onClick={handleTopupRequest}
                     disabled={createTopupCheckoutMutation.isPending}
                   >
                     {createTopupCheckoutMutation.isPending
-                      ? "Redirecting..."
-                      : "Continue"}
+                      ? t("clientWallet.topupSubmitting")
+                      : t("clientWallet.topupButton")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -347,26 +351,26 @@ export const ClientWallet = () => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Top-ups</CardDescription>
+            <CardDescription>{t("clientWallet.totalTopups")}</CardDescription>
             <CardTitle>{formatAmount(topupBalance)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center text-sm text-muted-foreground gap-1">
               <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-              Credited via Stripe
+              {t("clientWallet.creditedViaStripe")}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Wallet Spend</CardDescription>
+            <CardDescription>{t("clientWallet.walletSpend")}</CardDescription>
             <CardTitle>{formatAmount(walletSpend)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center text-sm text-muted-foreground gap-1">
               <ArrowUpRight className="h-4 w-4 text-red-600" />
-              Booking payments
+              {t("clientWallet.bookingPayments")}
             </div>
           </CardContent>
         </Card>
@@ -380,15 +384,17 @@ export const ClientWallet = () => {
 
       <Tabs defaultValue="transactions" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="transactions">
+            {t("clientWallet.transactionsTab")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions">
           <Card>
             <CardHeader>
-              <CardTitle>Transaction History</CardTitle>
+              <CardTitle>{t("clientWallet.transactionsTitle")}</CardTitle>
               <CardDescription>
-                Top-ups and wallet booking payments.
+                {t("clientWallet.transactionsDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -403,17 +409,19 @@ export const ClientWallet = () => {
                 </div>
               ) : transactions.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No wallet transactions yet.
+                  {t("clientWallet.noTransactions")}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>{t("clientWallet.colDate")}</TableHead>
+                      <TableHead>{t("clientWallet.colDescription")}</TableHead>
+                      <TableHead>{t("clientWallet.colType")}</TableHead>
+                      <TableHead>{t("clientWallet.colStatus")}</TableHead>
+                      <TableHead className="text-right">
+                        {t("clientWallet.colAmount")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -459,7 +467,7 @@ export const ClientWallet = () => {
 
       <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground inline-flex items-center gap-2">
         <Wallet className="h-4 w-4" />
-        Stripe is the top-up provider for client wallets.
+        {t("clientWallet.stripeNote")}
       </div>
     </div>
   );

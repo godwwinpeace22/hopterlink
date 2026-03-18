@@ -1,4 +1,5 @@
 import { useNavigate } from "@/lib/router";
+import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { Button } from "../../ui/button";
@@ -35,6 +36,7 @@ export function ClientDashboardHeader({
 }: ClientDashboardHeaderProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { t } = useTranslation();
 
   const handleSignOut = async () => {
     await signOut();
@@ -77,30 +79,34 @@ export function ClientDashboardHeader({
                 </Avatar>
                 <div className="hidden md:block text-left">
                   <p className="font-semibold text-gray-900">{clientName}</p>
-                  <p className="text-sm text-gray-600">Client Account</p>
+                  <p className="text-sm text-gray-600">
+                    {t("clientDashboard.clientAccountLabel")}
+                  </p>
                 </div>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Account</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {t("clientDashboard.accountMenuLabel")}
+              </DropdownMenuLabel>
               <DropdownMenuItem
                 className="cursor-pointer"
                 onSelect={() => navigate("/dashboard/client/profile")}
               >
-                Profile
+                {t("clientDashboard.profileMenuItem")}
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 className="cursor-pointer"
                 onSelect={() => navigate("/dashboard/client/my-jobs")}
               >
-                My Jobs
+                {t("clientDashboard.myJobsMenuItem")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer"
                 onSelect={() => navigate("/dashboard/client/post-job")}
               >
-                Post a Job
+                {t("clientDashboard.postJobMenuItem")}
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
@@ -108,7 +114,7 @@ export function ClientDashboardHeader({
                 className="cursor-pointer text-red-600 focus:text-red-600"
                 onSelect={handleSignOut}
               >
-                Sign out
+                {t("clientDashboard.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

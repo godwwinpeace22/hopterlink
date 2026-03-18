@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "@/lib/router";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
@@ -33,6 +34,7 @@ const getLocationLabel = (location: unknown) => {
 export const ProviderJobDetails = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { jobId } = useParams();
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
@@ -110,12 +112,12 @@ export const ProviderJobDetails = () => {
 
   const handleSubmitReview = async () => {
     if (!user?.id || !bookingId || !client?.id) {
-      setReviewError("Unable to submit review.");
+      setReviewError(t("providerJobDetails.submitReviewError"));
       return;
     }
 
     if (reviewRating === 0) {
-      setReviewError("Please select a rating.");
+      setReviewError(t("providerJobDetails.selectRating"));
       return;
     }
 
@@ -141,7 +143,9 @@ export const ProviderJobDetails = () => {
       await Promise.all([refetchReview(), refetchBooking()]);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to submit review.";
+        error instanceof Error
+          ? error.message
+          : t("providerJobDetails.submitReviewFailed");
       setReviewError(message);
     } finally {
       setReviewSubmitting(false);
@@ -165,7 +169,7 @@ export const ProviderJobDetails = () => {
       <div className="space-y-6">
         <Card>
           <CardContent className="py-8 text-center text-gray-600">
-            Job details not found.
+            {t("providerJobDetails.notFound")}
           </CardContent>
         </Card>
       </div>
@@ -184,34 +188,46 @@ export const ProviderJobDetails = () => {
         className="flex items-center gap-2 text-gray-600 hover:text-[#F7C876] transition-colors"
       >
         <ArrowLeft className="h-5 w-5" />
-        Back to Jobs
+        {t("providerJobDetails.backToJobs")}
       </button>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">{job?.title ?? "Job"}</CardTitle>
-          <p className="text-gray-600">Job details and schedule</p>
+          <CardTitle className="text-2xl">
+            {job?.title ?? t("providerJobs.title")}
+          </CardTitle>
+          <p className="text-gray-600">
+            {t("providerJobDetails.detailsSubtitle")}
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <p className="text-sm text-gray-500">Status</p>
+              <p className="text-sm text-gray-500">
+                {t("providerJobDetails.status")}
+              </p>
               <p className="font-semibold text-gray-900 capitalize">
                 {bookingResult.data.status?.replace("_", " ")}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Scheduled</p>
+              <p className="text-sm text-gray-500">
+                {t("providerJobDetails.scheduled")}
+              </p>
               <p className="font-semibold text-gray-900">
                 {formatDate(bookingResult.data.scheduled_date)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Budget</p>
+              <p className="text-sm text-gray-500">
+                {t("providerJobDetails.budget")}
+              </p>
               <p className="font-semibold text-gray-900">{budgetDisplay}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Location</p>
+              <p className="text-sm text-gray-500">
+                {t("providerJobDetails.location")}
+              </p>
               <p className="font-semibold text-gray-900">
                 {getLocationLabel(bookingResult.data.location)}
               </p>
@@ -219,23 +235,27 @@ export const ProviderJobDetails = () => {
           </div>
 
           <div>
-            <p className="text-sm text-gray-500 mb-2">Client</p>
+            <p className="text-sm text-gray-500 mb-2">
+              {t("providerJobDetails.client")}
+            </p>
             <p className="text-gray-900 font-semibold">
               {client?.id ? (
                 <Link
                   to={`/dashboard/provider/profile/${client.id}`}
                   className="text-[#F1A400] hover:underline"
                 >
-                  {client?.full_name ?? "Client"}
+                  {client?.full_name ?? t("providerJobs.client")}
                 </Link>
               ) : (
-                (client?.full_name ?? "Client")
+                (client?.full_name ?? t("providerJobs.client"))
               )}
             </p>
           </div>
 
           <div>
-            <p className="text-sm text-gray-500 mb-2">Description</p>
+            <p className="text-sm text-gray-500 mb-2">
+              {t("providerJobDetails.description")}
+            </p>
             <p className="text-gray-700 whitespace-pre-wrap">
               {job?.description ?? bookingResult.data.description ?? ""}
             </p>
@@ -257,12 +277,12 @@ export const ProviderJobDetails = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Leave a Review</CardTitle>
+          <CardTitle>{t("providerJobDetails.leaveReview")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!isCompleted && (
             <p className="text-sm text-gray-500">
-              Reviews unlock after the job is completed.
+              {t("providerJobDetails.reviewUnlock")}
             </p>
           )}
           {isCompleted && hasReview && (
@@ -280,7 +300,7 @@ export const ProviderJobDetails = () => {
                   </span>
                 </div>
                 <Badge className="bg-green-100 text-green-700 border-green-200">
-                  Review submitted
+                  {t("providerJobDetails.reviewSubmitted")}
                 </Badge>
               </div>
               {reviewResult?.data?.comment && (
@@ -290,7 +310,9 @@ export const ProviderJobDetails = () => {
               )}
               {reviewResult?.data?.created_at && (
                 <p className="mt-2 text-xs text-gray-500">
-                  Submitted {formatDate(reviewResult.data.created_at)}
+                  {t("providerJobDetails.submittedOn", {
+                    date: formatDate(reviewResult.data.created_at),
+                  })}
                 </p>
               )}
             </div>
@@ -304,7 +326,9 @@ export const ProviderJobDetails = () => {
           {isCompleted && !hasReview && (
             <>
               <div>
-                <p className="text-sm text-gray-500 mb-2">Rating</p>
+                <p className="text-sm text-gray-500 mb-2">
+                  {t("providerJobDetails.rating")}
+                </p>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -320,9 +344,11 @@ export const ProviderJobDetails = () => {
                 </div>
               </div>
               <div>
-                <p className="text-sm text-gray-500 mb-2">Comment</p>
+                <p className="text-sm text-gray-500 mb-2">
+                  {t("providerJobDetails.comment")}
+                </p>
                 <Textarea
-                  placeholder="Share your experience working with this client..."
+                  placeholder={t("providerJobDetails.commentPlaceholder")}
                   value={reviewComment}
                   onChange={(event) => setReviewComment(event.target.value)}
                   rows={4}
@@ -333,7 +359,9 @@ export const ProviderJobDetails = () => {
                 onClick={handleSubmitReview}
                 disabled={reviewSubmitting}
               >
-                {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                {reviewSubmitting
+                  ? t("providerJobDetails.submittingReview")
+                  : t("providerJobDetails.submitReview")}
               </Button>
             </>
           )}

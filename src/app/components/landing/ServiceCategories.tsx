@@ -1,5 +1,6 @@
 import { Link } from "@/lib/router";
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const categories = [
   {
@@ -88,21 +89,19 @@ export const services = categories.map((c) => ({
 }));
 
 export function ServiceCategories() {
+  const { t } = useTranslation();
   return (
     <section className="py-16 lg:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-xl mx-auto mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-            Explore our{" "}
+            {t("serviceCategories.titleMain")}{" "}
             <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-              Categories
+              {t("serviceCategories.titleHighlight")}
             </span>
           </h2>
-          <p className="text-gray-600">
-            Service categories help organize and structure the offerings on a
-            marketplace, making it easier for users to find what they need.
-          </p>
+          <p className="text-gray-600">{t("serviceCategories.subtitle")}</p>
         </div>
 
         {/* Category Grid */}
@@ -124,14 +123,14 @@ export function ServiceCategories() {
                 {cat.name}
               </h6>
               <p className="text-xs text-gray-500 mb-1">
-                {cat.listings} Listings
+                {t("serviceCategories.listings", { listings: cat.listings })}
               </p>
               <span className="text-xs text-amber-600 underline group-hover:text-amber-700">
-                View All
+                {t("serviceCategories.viewAll")}
               </span>
               {cat.isNew && (
                 <span className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  New
+                  {t("serviceCategories.newBadge")}
                 </span>
               )}
             </Link>
@@ -144,7 +143,7 @@ export function ServiceCategories() {
             to="/services"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
           >
-            View All
+            {t("serviceCategories.viewAll")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

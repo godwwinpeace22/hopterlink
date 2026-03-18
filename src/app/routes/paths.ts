@@ -7,6 +7,7 @@ const adminRoot = "/dashboard/admin";
 const adminSections = {
   overview: "overview",
   users: "users",
+  countries: "countries",
   verification: "verification",
   disputes: "disputes",
   revenue: "revenue",

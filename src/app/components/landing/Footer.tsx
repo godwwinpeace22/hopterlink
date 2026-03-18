@@ -1,24 +1,7 @@
 import { Link } from "@/lib/router";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 import logo from "@/assets/logo.png";
-
-const productLinks = [
-  { label: "Features", to: "/services" },
-  { label: "How It Works", to: "/how-it-works" },
-  { label: "Providers", to: "/providers" },
-];
-
-const supportLinks = [
-  { label: "Help Center", to: "/help" },
-  { label: "Terms and Conditions", to: "/terms" },
-  { label: "Privacy Policy", to: "/privacy" },
-];
-
-const providerLinks = [
-  { label: "About", to: "/about" },
-  { label: "FAQ's", to: "/how-it-works" },
-  { label: "Become a Provider", to: "/sign-up" },
-];
+import { useTranslation } from "react-i18next";
 
 const socialLinks = [
   { icon: Facebook, label: "Facebook", to: "https://facebook.com/hopterlink" },
@@ -31,6 +14,26 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const { t } = useTranslation();
+
+  const productLinks = [
+    { label: t("footer.features"), to: "/services" },
+    { label: t("header.howItWorks"), to: "/how-it-works" },
+    { label: t("header.providers"), to: "/providers" },
+  ];
+
+  const supportLinks = [
+    { label: t("footer.helpCenter"), to: "/help" },
+    { label: t("common.termsAndConditions"), to: "/terms" },
+    { label: t("common.privacyPolicy"), to: "/privacy" },
+  ];
+
+  const providerLinks = [
+    { label: t("header.about"), to: "/about" },
+    { label: t("footer.faqs"), to: "/how-it-works" },
+    { label: t("footer.becomeProvider"), to: "/sign-up" },
+  ];
+
   return (
     <footer className="bg-gray-900 text-gray-300">
       {/* Top Section */}
@@ -42,7 +45,9 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
           {/* Product */}
           <div>
-            <h5 className="text-white font-semibold mb-4">Product</h5>
+            <h5 className="text-white font-semibold mb-4">
+              {t("footer.productTitle")}
+            </h5>
             <ul className="space-y-3">
               {productLinks.map((link) => (
                 <li key={link.label}>
@@ -59,7 +64,9 @@ export function Footer() {
 
           {/* Support */}
           <div>
-            <h5 className="text-white font-semibold mb-4">Support</h5>
+            <h5 className="text-white font-semibold mb-4">
+              {t("footer.supportTitle")}
+            </h5>
             <ul className="space-y-3">
               {supportLinks.map((link) => (
                 <li key={link.label}>
@@ -76,7 +83,9 @@ export function Footer() {
 
           {/* For Provider */}
           <div>
-            <h5 className="text-white font-semibold mb-4">For Provider</h5>
+            <h5 className="text-white font-semibold mb-4">
+              {t("footer.forProviderTitle")}
+            </h5>
             <ul className="space-y-3">
               {providerLinks.map((link) => (
                 <li key={link.label}>
@@ -94,9 +103,11 @@ export function Footer() {
           {/* App Download */}
           <div className="col-span-2 md:col-span-1 lg:col-span-2">
             <div>
-              <p className="text-white font-semibold mb-3">Download Our App</p>
+              <p className="text-white font-semibold mb-3">
+                {t("footer.downloadTitle")}
+              </p>
               <p className="text-sm text-gray-400 mb-4">
-                Get the Hopterlink mobile app for the best experience.
+                {t("footer.downloadSubtitle")}
               </p>
               <div className="flex items-center gap-3 flex-wrap">
                 <img
@@ -137,21 +148,19 @@ export function Footer() {
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-sm text-gray-500">
-              Copyright © 2026 — All Rights Reserved Hopterlink
-            </p>
+            <p className="text-sm text-gray-500">{t("footer.copyright")}</p>
             <div className="flex items-center gap-6">
               <Link
                 to="/terms"
                 className="text-sm text-gray-500 hover:text-white transition-colors"
               >
-                Terms and Conditions
+                {t("common.termsAndConditions")}
               </Link>
               <Link
                 to="/privacy"
                 className="text-sm text-gray-500 hover:text-white transition-colors"
               >
-                Privacy Policy
+                {t("common.privacyPolicy")}
               </Link>
             </div>
           </div>

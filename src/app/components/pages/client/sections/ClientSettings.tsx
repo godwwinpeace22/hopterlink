@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "@/lib/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -55,6 +56,7 @@ export function ClientSettings() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // ── Profile fields ──────────────────────────────────────────
@@ -171,12 +173,14 @@ export function ClientSettings() {
     const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error("Only JPG, PNG, WebP, or GIF images are allowed.");
+      toast.error(t("clientSettings.avatarTypeError"));
       return;
     }
     if (file.size > MAX_BYTES) {
       toast.error(
-        `Image must be under 5 MB (yours is ${(file.size / 1024 / 1024).toFixed(1)} MB).`,
+        t("clientSettings.avatarSizeError", {
+          size: (file.size / 1024 / 1024).toFixed(1),
+        }),
       );
       return;
     }
@@ -201,7 +205,7 @@ export function ClientSettings() {
       queryClient.invalidateQueries({
         queryKey: ["settings_profile", user.id],
       });
-      toast.success("Avatar updated.");
+      toast.success(t("clientSettings.avatarUpdated"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -232,7 +236,7 @@ export function ClientSettings() {
       queryClient.invalidateQueries({
         queryKey: ["dashboard_profile", user?.id],
       });
-      toast.success("Profile updated.");
+      toast.success(t("clientSettings.profileUpdated"));
     },
     onError: (err) =>
       toast.error(err instanceof Error ? err.message : "Failed to save."),
@@ -241,15 +245,15 @@ export function ClientSettings() {
   // ── Change password ───────────────────────────────────────────
   const handleChangePassword = async () => {
     if (!newPassword || !confirmPassword) {
-      toast.error("Please fill in all password fields.");
+      toast.error(t("clientSettings.passwordFields"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error("New passwords do not match.");
+      toast.error(t("clientSettings.passwordNoMatch"));
       return;
     }
     if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters.");
+      toast.error(t("clientSettings.passwordMinLength"));
       return;
     }
     setPasswordLoading(true);
@@ -258,7 +262,7 @@ export function ClientSettings() {
         password: newPassword,
       });
       if (error) throw error;
-      toast.success("Password updated.");
+      toast.success(t("clientSettings.passwordUpdated"));
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
@@ -281,7 +285,7 @@ export function ClientSettings() {
         .update({ notification_preferences: prefs })
         .eq("user_id", user.id);
       if (error) throw error;
-      toast.success("Notification preferences saved.");
+      toast.success(t("clientSettings.notifUpdated"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save.");
     } finally {
@@ -313,25 +317,25 @@ export function ClientSettings() {
 
   return (
     <div className="max-w-2xl space-y-6 pt-6">
-      <PageHeader title="Settings" />
+      <PageHeader title={t("clientSettings.title")} />
 
       <Tabs defaultValue="profile">
         <TabsList className="w-full">
           <TabsTrigger value="profile" className="flex-1 gap-1.5">
             <User className="h-3.5 w-3.5" />
-            Profile
+            {t("clientSettings.tabProfile")}
           </TabsTrigger>
           <TabsTrigger value="password" className="flex-1 gap-1.5">
             <Lock className="h-3.5 w-3.5" />
-            Password
+            {t("clientSettings.tabPassword")}
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex-1 gap-1.5">
             <Bell className="h-3.5 w-3.5" />
-            Notifications
+            {t("clientSettings.tabNotifications")}
           </TabsTrigger>
           <TabsTrigger value="account" className="flex-1 gap-1.5">
             <LogOut className="h-3.5 w-3.5" />
-            Account
+            {t("clientSettings.tabAccount")}
           </TabsTrigger>
         </TabsList>
 
@@ -340,7 +344,9 @@ export function ClientSettings() {
           {/* Avatar */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Profile Photo</CardTitle>
+              <CardTitle className="text-base">
+                {t("clientSettings.avatarSection")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-5">
               <div className="relative">
@@ -368,11 +374,11 @@ export function ClientSettings() {
               <div>
                 <p className="text-sm font-medium text-slate-900">
                   {avatarUploading
-                    ? "Uploading…"
-                    : "Click the camera to change"}
+                    ? t("clientSettings.uploading")
+                    : t("clientSettings.clickToChange")}
                 </p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  JPG, PNG, WebP or GIF · Max 5 MB
+                  {t("clientSettings.fileFormat")}
                 </p>
               </div>
             </CardContent>
@@ -381,20 +387,24 @@ export function ClientSettings() {
           {/* Info */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Personal Info</CardTitle>
+              <CardTitle className="text-base">
+                {t("clientSettings.personalInfoTitle")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="full-name">Full Name</Label>
+                <Label htmlFor="full-name">
+                  {t("clientSettings.fullName")}
+                </Label>
                 <Input
                   id="full-name"
-                  placeholder="Your full name"
+                  placeholder={t("clientSettings.fullNamePlaceholder")}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("clientSettings.emailLabel")}</Label>
                 <Input
                   id="email"
                   value={email}
@@ -402,24 +412,24 @@ export function ClientSettings() {
                   className="bg-slate-50 text-slate-500"
                 />
                 <p className="text-xs text-slate-400">
-                  Email cannot be changed from here.
+                  {t("clientSettings.emailReadonly")}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">{t("clientSettings.phone")}</Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder={t("clientSettings.phonePlaceholder")}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
+                <Label htmlFor="city">{t("clientSettings.city")}</Label>
                 <Input
                   id="city"
-                  placeholder="e.g. Toronto"
+                  placeholder={t("clientSettings.cityPlaceholder")}
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                 />
@@ -429,7 +439,9 @@ export function ClientSettings() {
                 disabled={profileMutation.isPending}
                 className="bg-[#F1A400] hover:bg-[#C17A00] text-white"
               >
-                {profileMutation.isPending ? "Saving…" : "Save Changes"}
+                {profileMutation.isPending
+                  ? t("clientSettings.savingProfile")
+                  : t("clientSettings.saveProfile")}
               </Button>
             </CardContent>
           </Card>
@@ -439,28 +451,34 @@ export function ClientSettings() {
         <TabsContent value="password" className="mt-5">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Change Password</CardTitle>
+              <CardTitle className="text-base">
+                {t("clientSettings.passwordCardTitle")}
+              </CardTitle>
               <CardDescription>
-                Update your account password. Must be at least 8 characters.
+                {t("clientSettings.passwordCardDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
+                <Label htmlFor="new-password">
+                  {t("clientSettings.newPassword")}
+                </Label>
                 <Input
                   id="new-password"
                   type="password"
-                  placeholder="Minimum 8 characters"
+                  placeholder={t("clientSettings.newPasswordPlaceholder")}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Label htmlFor="confirm-password">
+                  {t("clientSettings.confirmPassword")}
+                </Label>
                 <Input
                   id="confirm-password"
                   type="password"
-                  placeholder="Re-enter new password"
+                  placeholder={t("clientSettings.confirmPasswordPlaceholder")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
@@ -470,7 +488,9 @@ export function ClientSettings() {
                 disabled={passwordLoading}
                 className="bg-[#F1A400] hover:bg-[#C17A00] text-white"
               >
-                {passwordLoading ? "Updating…" : "Update Password"}
+                {passwordLoading
+                  ? t("clientSettings.savingPassword")
+                  : t("clientSettings.savePassword")}
               </Button>
             </CardContent>
           </Card>
@@ -481,20 +501,20 @@ export function ClientSettings() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Notification Preferences
+                {t("clientSettings.notifCardTitle")}
               </CardTitle>
               <CardDescription>
-                Choose how you want to be notified about activity.
+                {t("clientSettings.notifCardDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-0 divide-y">
               <div className="flex items-center justify-between py-4">
                 <div>
                   <p className="text-sm font-medium text-slate-900">
-                    Email Notifications
+                    {t("clientSettings.notifEmail")}
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Booking updates, messages, and payment confirmations
+                    {t("clientSettings.notifEmailDesc")}
                   </p>
                 </div>
                 <Switch checked={notifEmail} onCheckedChange={setNotifEmail} />
@@ -502,10 +522,10 @@ export function ClientSettings() {
               <div className="flex items-center justify-between py-4">
                 <div>
                   <p className="text-sm font-medium text-slate-900">
-                    Push Notifications
+                    {t("clientSettings.notifPush")}
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    In-app alerts for new messages and booking changes
+                    {t("clientSettings.notifPushDesc")}
                   </p>
                 </div>
                 <Switch checked={notifPush} onCheckedChange={setNotifPush} />
@@ -513,10 +533,10 @@ export function ClientSettings() {
               <div className="flex items-center justify-between py-4">
                 <div>
                   <p className="text-sm font-medium text-slate-900">
-                    SMS Notifications
+                    {t("clientSettings.notifSms")}
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Text messages for urgent updates (Coming soon)
+                    {t("clientSettings.notifSmsDesc")}
                   </p>
                 </div>
                 <Switch
@@ -531,7 +551,9 @@ export function ClientSettings() {
                   disabled={notifLoading}
                   className="bg-[#F1A400] hover:bg-[#C17A00] text-white"
                 >
-                  {notifLoading ? "Saving…" : "Save Preferences"}
+                  {notifLoading
+                    ? t("clientSettings.savingNotif")
+                    : t("clientSettings.saveNotif")}
                 </Button>
               </div>
             </CardContent>
@@ -542,7 +564,9 @@ export function ClientSettings() {
         <TabsContent value="account" className="mt-5">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Account</CardTitle>
+              <CardTitle className="text-base">
+                {t("clientSettings.accountCardTitle")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <button
@@ -551,7 +575,7 @@ export function ClientSettings() {
               >
                 <LogOut className="h-4 w-4 text-slate-500 shrink-0" />
                 <span className="flex-1 text-sm font-medium text-slate-900">
-                  Sign Out
+                  {t("clientSettings.signOutButton")}
                 </span>
               </button>
               <Separator />
@@ -560,26 +584,26 @@ export function ClientSettings() {
                   <button className="flex w-full items-center gap-3 px-6 py-4 text-left transition-colors hover:bg-red-50">
                     <Trash2 className="h-4 w-4 text-red-500 shrink-0" />
                     <span className="flex-1 text-sm font-medium text-red-600">
-                      Delete Account
+                      {t("clientSettings.deleteAccountButton")}
                     </span>
                   </button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                    <AlertDialogTitle>
+                      {t("clientSettings.deleteAccountButton")}
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action is permanent and cannot be undone. Your
-                      account and all associated data will be deactivated
-                      immediately.
+                      {t("clientSettings.deleteAccountPermanent")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                     <AlertDialogAction
                       className="bg-red-600 hover:bg-red-700 text-white"
                       onClick={handleDeleteAccount}
                     >
-                      Delete Account
+                      {t("clientSettings.deleteAccountButton")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

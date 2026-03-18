@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export function SignIn() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { signIn, refreshProfile } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
@@ -43,10 +45,8 @@ export function SignIn() {
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader className="mb-4">
-            <CardTitle className="text-2xl">Sign In</CardTitle>
-            <p className="text-muted-foreground">
-              Welcome back! Please enter your details
-            </p>
+            <CardTitle className="text-2xl">{t("signIn.title")}</CardTitle>
+            <p className="text-muted-foreground">{t("signIn.subtitle")}</p>
           </CardHeader>
 
           <CardContent>
@@ -92,12 +92,12 @@ export function SignIn() {
 
               <div>
                 <Label htmlFor="email" className="mb-3">
-                  Email Address
+                  {t("signIn.emailLabel")}
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={t("signIn.emailPlaceholder")}
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -108,18 +108,18 @@ export function SignIn() {
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t("signIn.passwordLabel")}</Label>
                   <Link
                     to="/forgot-password"
                     className="text-sm text-amber-500 hover:text-orange-500"
                   >
-                    Forgot password?
+                    {t("signIn.forgotPassword")}
                   </Link>
                 </div>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={t("signIn.passwordPlaceholder")}
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
@@ -132,7 +132,7 @@ export function SignIn() {
                 type="submit"
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6"
               >
-                {isSubmitting ? "Signing In..." : "Sign In"}
+                {isSubmitting ? t("signIn.signingIn") : t("signIn.button")}
               </Button>
             </form>
 
@@ -143,7 +143,7 @@ export function SignIn() {
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-white text-gray-500">
-                    New to Hopterlink?
+                    {t("signIn.newToHopterlink")}
                   </span>
                 </div>
               </div>
@@ -154,14 +154,14 @@ export function SignIn() {
                   onClick={() => navigate("/client-signup")}
                   className="w-full"
                 >
-                  Sign Up as Client
+                  {t("signIn.signUpAsClient")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => navigate("/provider-signup")}
                   className="w-full"
                 >
-                  Sign Up as Provider
+                  {t("signIn.signUpAsProvider")}
                 </Button>
               </div>
             </div>

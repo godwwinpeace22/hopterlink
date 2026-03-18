@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "@/lib/router";
+import { useTranslation } from "react-i18next";
 import logo from "@/assets/logo.png";
 import { Badge } from "../../ui/badge";
 import {
@@ -69,6 +70,7 @@ export function ClientDashboardLayout({}: ClientDashboardLayoutProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const { unreadMessages, unreadNotifications } = useUnreadCounts(user?.id);
 
@@ -133,28 +135,48 @@ export function ClientDashboardLayout({}: ClientDashboardLayoutProps) {
 
   const navigationItems = useMemo(
     () => [
-      { id: "overview", label: "Overview", icon: LayoutDashboard },
-      { id: "providers", label: "Browse Providers", icon: Briefcase },
-      { id: "bookings", label: "Bookings", icon: Calendar },
-      { id: "reviews", label: "Reviews", icon: Star },
-      { id: "wallet", label: "Wallet", icon: Wallet },
-      { id: "my-jobs", label: "My Jobs", icon: Briefcase },
-      { id: "post-job", label: "Post a Job", icon: Gift },
-      { id: "messages", label: "Messages", icon: MessageSquare },
-      { id: "notifications", label: "Notifications", icon: Bell },
-      { id: "profile", label: "Profile", icon: User },
+      {
+        id: "overview",
+        label: t("clientDashboard.navOverview"),
+        icon: LayoutDashboard,
+      },
+      {
+        id: "providers",
+        label: t("clientDashboard.navProviders"),
+        icon: Briefcase,
+      },
+      {
+        id: "bookings",
+        label: t("clientDashboard.navBookings"),
+        icon: Calendar,
+      },
+      { id: "reviews", label: t("clientDashboard.navReviews"), icon: Star },
+      { id: "wallet", label: t("clientDashboard.navWallet"), icon: Wallet },
+      { id: "my-jobs", label: t("clientDashboard.navMyJobs"), icon: Briefcase },
+      { id: "post-job", label: t("clientDashboard.navPostJob"), icon: Gift },
+      {
+        id: "messages",
+        label: t("clientDashboard.navMessages"),
+        icon: MessageSquare,
+      },
+      {
+        id: "notifications",
+        label: t("clientDashboard.navNotifications"),
+        icon: Bell,
+      },
+      { id: "profile", label: t("clientDashboard.navProfile"), icon: User },
     ],
-    [],
+    [t],
   );
 
   const navigationSections = useMemo(
     () => [
       {
-        title: "Overview",
+        title: t("clientDashboard.sectionOverview"),
         items: ["overview"] as ClientDashboardSection[],
       },
       {
-        title: "Services",
+        title: t("clientDashboard.sectionServices"),
         items: [
           "providers",
           "bookings",
@@ -163,19 +185,19 @@ export function ClientDashboardLayout({}: ClientDashboardLayoutProps) {
         ] as ClientDashboardSection[],
       },
       {
-        title: "Jobs",
+        title: t("clientDashboard.sectionJobs"),
         items: ["my-jobs", "post-job"] as ClientDashboardSection[],
       },
       {
-        title: "Communication",
+        title: t("clientDashboard.sectionCommunication"),
         items: ["messages", "notifications"] as ClientDashboardSection[],
       },
       {
-        title: "Account",
+        title: t("clientDashboard.sectionAccount"),
         items: ["profile"] as ClientDashboardSection[],
       },
     ],
-    [],
+    [t],
   );
 
   const contextValue = {
@@ -250,7 +272,7 @@ export function ClientDashboardLayout({}: ClientDashboardLayoutProps) {
                   className="text-red-600 hover:text-red-600 cursor-pointer"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Sign Out</span>
+                  <span>{t("clientDashboard.signOut")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

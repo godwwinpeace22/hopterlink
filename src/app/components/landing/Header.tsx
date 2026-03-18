@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
@@ -17,15 +18,15 @@ import logo from "@/assets/logo.png";
 export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { user, profile, activeRole, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { to: "/services", label: "Services" },
-    { to: "/providers", label: "Providers" },
-    { to: "/how-it-works", label: "How It Works" },
-    { to: "/about", label: "About" },
-    // { to: "/pricing", label: "Pricing" },
+    { to: "/services", label: t("header.services") },
+    { to: "/providers", label: t("header.providers") },
+    { to: "/how-it-works", label: t("header.howItWorks") },
+    { to: "/about", label: t("header.about") },
   ];
 
   const isActiveLink = (path: string) =>
@@ -42,11 +43,11 @@ export function Header() {
   const roleCta =
     activeRole === "provider"
       ? {
-          label: "Find Jobs",
+          label: t("header.findJobs"),
           path: paths.dashboard.provider.absolute("jobBoard"),
         }
       : {
-          label: "Find Providers",
+          label: t("header.findProviders"),
           path: paths.dashboard.client.absolute("providers"),
         };
   const initials =
@@ -96,15 +97,17 @@ export function Header() {
           ))}
         {includePublicLinks && <DropdownMenuSeparator />}
         <DropdownMenuItem onClick={() => navigate(dashboardPath)}>
-          Dashboard
+          {t("common.dashboard")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate(profilePath)}>
-          Profile
+          {t("common.profile")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate(roleCta.path)}>
           {roleCta.label}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSignOut}>
+          {t("common.logout")}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -139,13 +142,13 @@ export function Header() {
             ) : (
               <>
                 <Button variant="ghost" onClick={() => navigate("/signin")}>
-                  Sign In
+                  {t("common.signIn")}
                 </Button>
                 <Button
                   className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
                   onClick={() => navigate("/client-signup")}
                 >
-                  Get Started
+                  {t("header.getStarted")}
                 </Button>
               </>
             )}
@@ -190,7 +193,7 @@ export function Header() {
                   navigate("/signin");
                 }}
               >
-                Sign In
+                {t("common.signIn")}
               </Button>
               <Button
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
@@ -199,7 +202,7 @@ export function Header() {
                   navigate("/client-signup");
                 }}
               >
-                Get Started
+                {t("header.getStarted")}
               </Button>
             </div>
           </div>

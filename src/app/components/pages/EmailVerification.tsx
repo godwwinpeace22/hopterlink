@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "@/lib/router";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Mail, ArrowLeft } from "lucide-react";
+import { Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "react-i18next";
 
 export function EmailVerification() {
   const navigate = useNavigate();
@@ -13,6 +14,38 @@ export function EmailVerification() {
   const [isChecking, setIsChecking] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const email = searchParams.get("email");
+  const { t } = useTranslation();
+
+  // When the user clicks the link in their email, Supabase redirects back here
+  // with access_token + refresh_token in the URL hash. Set the session so
+  // onAuthStateChange fires SIGNED_IN, then navigate to the dashboard.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash.slice(1));
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
+
+    if (accessToken && refreshToken && type === "signup") {
+      supabase.auth
+        .setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (!error) {
+            // Clear the hash so it's not re-processed on back-navigation
+            window.history.replaceState(
+              null,
+              "",
+              window.location.pathname + window.location.search,
+            );
+            navigate("/dashboard");
+          } else {
+            setStatusMessage("Verification failed. Please try signing in.");
+          }
+        });
+    }
+  }, [navigate]);
 
   const handleContinue = async () => {
     if (!user) {
@@ -34,9 +67,7 @@ export function EmailVerification() {
       }
 
       if (!freshUser?.email_confirmed_at) {
-        setStatusMessage(
-          "Your email is not verified yet. Open the link in your inbox, then try again.",
-        );
+        setStatusMessage(t("emailVerification.notVerified"));
         return;
       }
 
@@ -57,9 +88,11 @@ export function EmailVerification() {
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader className="mb-4">
-            <CardTitle className="text-2xl">Check your email</CardTitle>
+            <CardTitle className="text-2xl">
+              {t("emailVerification.title")}
+            </CardTitle>
             <p className="text-muted-foreground">
-              We've sent a verification link to finish setting up your account.
+              {t("emailVerification.subtitle")}
             </p>
           </CardHeader>
 
@@ -70,13 +103,11 @@ export function EmailVerification() {
               </div>
               {email && (
                 <p className="text-sm text-gray-600 text-center">
-                  A verification email was sent to{" "}
-                  <span className="font-medium text-gray-900">{email}</span>.
+                  {t("emailVerification.sentTo", { email })}
                 </p>
               )}
               <p className="text-sm text-gray-500 text-center">
-                Click the link in the email to verify your account, then come
-                back here to continue.
+                {t("emailVerification.instruction")}
               </p>
             </div>
 
@@ -87,12 +118,14 @@ export function EmailVerification() {
                   onClick={handleContinue}
                   disabled={isChecking}
                 >
-                  {isChecking ? "Checking..." : "Continue"}
+                  {isChecking
+                    ? t("emailVerification.checking")
+                    : t("emailVerification.continueButton")}
                 </Button>
               ) : (
                 <Link to="/signin" className="block">
                   <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-6">
-                    Go to Sign In
+                    {t("emailVerification.goToSignIn")}
                   </Button>
                 </Link>
               )}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import {
@@ -52,6 +53,7 @@ const truncateMessage = (message: string, limit = 90) => {
 
 export function Notifications() {
   const { user, activeRole } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -79,7 +81,7 @@ export function Notifications() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Failed to load notifications",
+            : t("notifications.failedToLoad"),
         );
       } finally {
         if (!silent) {
@@ -207,16 +209,16 @@ export function Notifications() {
   return (
     <div className="space-y-4 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader title="Notifications" hideBack />
+        <PageHeader title={t("notifications.title")} hideBack />
         <p className="text-sm text-gray-500">
           {unreadCount > 0
-            ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-            : "All caught up"}
+            ? t("notifications.unread", { count: unreadCount })
+            : t("notifications.allCaughtUp")}
         </p>
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" onClick={markAllRead}>
             <CheckCheck className="mr-1.5 h-4 w-4" />
-            Mark all as read
+            {t("notifications.markAllRead")}
           </Button>
         )}
       </div>
@@ -229,14 +231,14 @@ export function Notifications() {
 
       {isLoading && (
         <p className="py-12 text-center text-sm text-gray-500">
-          Loading notifications…
+          {t("notifications.loading")}
         </p>
       )}
 
       {!isLoading && notifications.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <Info className="h-10 w-10 text-gray-300" />
-          <p className="text-sm text-gray-500">No notifications yet.</p>
+          <p className="text-sm text-gray-500">{t("notifications.empty")}</p>
         </div>
       )}
 
@@ -295,7 +297,7 @@ export function Notifications() {
                         onClick={() => markRead(notification.id)}
                       >
                         <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                        Mark as read
+                        {t("notifications.markRead")}
                       </Button>
                     )}
 
@@ -306,7 +308,9 @@ export function Notifications() {
                         className="h-7 px-2 text-xs"
                         onClick={() => toggleExpanded(notification.id)}
                       >
-                        {isExpanded ? "Show less" : "Show more"}
+                        {isExpanded
+                          ? t("notifications.showLess")
+                          : t("notifications.showMore")}
                       </Button>
                     )}
 
@@ -318,7 +322,7 @@ export function Notifications() {
                         onClick={() => handleOpenNotification(notification)}
                       >
                         <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                        View details
+                        {t("notifications.viewDetails")}
                       </Button>
                     )}
 
@@ -330,7 +334,7 @@ export function Notifications() {
                         onClick={() => handleOpenNotification(notification)}
                       >
                         <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                        View details
+                        {t("notifications.viewDetails")}
                       </Button>
                     )}
                   </div>

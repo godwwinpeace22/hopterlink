@@ -9,6 +9,7 @@ import {
   Heart,
 } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
+import { useTranslation } from "react-i18next";
 
 interface ServiceItem {
   title: string;
@@ -150,6 +151,7 @@ function ServiceImageCarousel({ images }: { images: string[] }) {
 }
 
 export function FeaturedServices() {
+  const { t } = useTranslation();
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
@@ -165,15 +167,12 @@ export function FeaturedServices() {
         {/* Section Header */}
         <div className="text-center max-w-xl mx-auto mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-            Our Featured{" "}
+            {t("featuredServices.titleMain")}{" "}
             <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-              Services
+              {t("featuredServices.titleHighlight")}
             </span>
           </h2>
-          <p className="text-gray-600">
-            Each listing is designed to be clear and concise, providing
-            customers with the best options.
-          </p>
+          <p className="text-gray-600">{t("featuredServices.subtitle")}</p>
         </div>
 
         {/* Carousel */}
@@ -192,7 +191,7 @@ export function FeaturedServices() {
                         <div className="absolute top-3 left-3">
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-md">
                             <TrendingUp className="h-3 w-3" />
-                            Trending
+                            {t("featuredServices.trending")}
                           </span>
                         </div>
                       )}
@@ -211,7 +210,9 @@ export function FeaturedServices() {
                       </h6>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-600">
-                          Service starts at {service.price}
+                          {t("featuredServices.serviceStartsAt", {
+                            price: service.price,
+                          })}
                         </p>
                         <span className="inline-flex items-center gap-1 text-sm">
                           <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
@@ -246,7 +247,7 @@ export function FeaturedServices() {
             to="/services"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
           >
-            View All
+            {t("featuredServices.viewAll")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

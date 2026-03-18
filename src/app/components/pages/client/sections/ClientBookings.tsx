@@ -246,16 +246,20 @@ export const ClientBookings = () => {
               <Tabs defaultValue="upcoming" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="upcoming">
-                    {t("clientBookings.tabUpcoming")} ({upcomingBookings.length})
+                    {t("clientBookings.tabUpcoming")} ({upcomingBookings.length}
+                    )
                   </TabsTrigger>
                   <TabsTrigger value="in-progress">
-                    {t("clientBookings.tabInProgress")} ({inProgressBookings.length})
+                    {t("clientBookings.tabInProgress")} (
+                    {inProgressBookings.length})
                   </TabsTrigger>
                   <TabsTrigger value="completed">
-                    {t("clientBookings.tabCompleted")} ({completedBookings.length})
+                    {t("clientBookings.tabCompleted")} (
+                    {completedBookings.length})
                   </TabsTrigger>
                   <TabsTrigger value="cancelled">
-                    {t("clientBookings.tabCancelled")} ({cancelledBookings.length})
+                    {t("clientBookings.tabCancelled")} (
+                    {cancelledBookings.length})
                   </TabsTrigger>
                 </TabsList>
 
@@ -300,7 +304,7 @@ export const ClientBookings = () => {
                                       >
                                         {booking.bookingStatus === "pending"
                                           ? t("clientBookings.statusPending")
-                                          : t("clientBookings.statusConfirmed")
+                                          : t("clientBookings.statusConfirmed")}
                                       </Badge>
                                     </div>
                                     <p className="text-sm text-gray-600 mb-2">
@@ -345,7 +349,10 @@ export const ClientBookings = () => {
                                           "pending"}
                                       </p>
                                       <p className="font-bold text-gray-900 mt-2">
-                                        {t("clientBookings.price", { defaultValue: "Price" })}: ${booking.price}
+                                        {t("clientBookings.price", {
+                                          defaultValue: "Price",
+                                        })}
+                                        : ${booking.price}
                                       </p>
                                     </div>
                                   </div>
@@ -477,15 +484,16 @@ export const ClientBookings = () => {
                                     <div className="space-y-1 text-sm text-gray-600">
                                       <p className="flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
-                                        {t("clientBookings.started")}: {booking.date} at{" "}
-                                        {booking.time}
+                                        {t("clientBookings.started")}:{" "}
+                                        {booking.date} at {booking.time}
                                       </p>
                                       <p className="flex items-center gap-2">
                                         <MapPin className="h-4 w-4" />
                                         {booking.address}
                                       </p>
                                       <p className="font-bold text-gray-900 mt-2">
-                                        {t("clientBookings.price")}: ${booking.price}
+                                        {t("clientBookings.price")}: $
+                                        {booking.price}
                                       </p>
                                     </div>
                                   </div>
@@ -592,7 +600,8 @@ export const ClientBookings = () => {
                                   <div className="space-y-1 text-sm text-gray-600">
                                     <p className="flex items-center gap-2">
                                       <Calendar className="h-4 w-4" />
-                                      {t("clientBookings.completedLabel")}: {booking.date}
+                                      {t("clientBookings.completedLabel")}:{" "}
+                                      {booking.date}
                                     </p>
                                     <p className="text-sm text-gray-600">
                                       {t("clientBookings.paymentLabel")}:{" "}
@@ -601,7 +610,8 @@ export const ClientBookings = () => {
                                         "pending"}
                                     </p>
                                     <p className="font-bold text-green-600 mt-2">
-                                      {t("clientBookings.paidLabel")}: ${booking.price}
+                                      {t("clientBookings.paidLabel")}: $
+                                      {booking.price}
                                     </p>
                                   </div>
                                 </div>
@@ -692,7 +702,7 @@ export const ClientBookings = () => {
                                     >
                                       {booking.bookingStatus === "disputed"
                                         ? t("clientBookings.statusDisputed")
-                                        : t("clientBookings.statusCancelled")
+                                        : t("clientBookings.statusCancelled")}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-gray-600 mb-2">
@@ -726,7 +736,8 @@ export const ClientBookings = () => {
                                         "pending"}
                                     </p>
                                     <p className="font-bold text-gray-900 mt-2">
-                                      {t("clientBookings.price")}: ${booking.price}
+                                      {t("clientBookings.price")}: $
+                                      {booking.price}
                                     </p>
                                   </div>
                                 </div>
@@ -746,9 +757,7 @@ export const ClientBookings = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("clientBookings.reviewTitle")}</DialogTitle>
-            <DialogDescription>
-              {selectedBooking?.provider}
-            </DialogDescription>
+            <DialogDescription>{selectedBooking?.provider}</DialogDescription>
           </DialogHeader>
           {selectedBooking && (
             <div className="space-y-4">
@@ -765,7 +774,9 @@ export const ClientBookings = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t("clientBookings.reviewLabel")}</label>
+                <label className="block text-sm font-medium mb-2">
+                  {t("clientBookings.reviewLabel")}
+                </label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -801,7 +812,9 @@ export const ClientBookings = () => {
                     reviewRating === 0 || reviewExists || isReviewSubmitting
                   }
                 >
-                  {isReviewSubmitting ? t("clientBookings.reviewSubmitting") : t("clientBookings.reviewSubmit")}
+                  {isReviewSubmitting
+                    ? t("clientBookings.reviewSubmitting")
+                    : t("clientBookings.reviewSubmit")}
                 </Button>
                 <Button
                   onClick={() => {
@@ -823,9 +836,7 @@ export const ClientBookings = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("clientBookings.bookingDetails")}</DialogTitle>
-            <DialogDescription>
-              {selectedBooking?.service}
-            </DialogDescription>
+            <DialogDescription>{selectedBooking?.service}</DialogDescription>
           </DialogHeader>
           {selectedBooking && (
             <div className="space-y-4">
@@ -839,7 +850,9 @@ export const ClientBookings = () => {
                       {selectedBooking.service}
                     </p>
                     <p className="text-sm text-slate-600">
-                      {t("clientBookings.withProvider", { name: selectedBooking.provider })}
+                      {t("clientBookings.withProvider", {
+                        name: selectedBooking.provider,
+                      })}
                     </p>
                   </div>
                   <Badge className="bg-white text-[#8A5A00] hover:bg-white">
@@ -870,7 +883,8 @@ export const ClientBookings = () => {
                     {t("clientBookings.address")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
-                    {selectedBooking.address || t("clientBookings.addressNotProvided")}
+                    {selectedBooking.address ||
+                      t("clientBookings.addressNotProvided")}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4">
@@ -888,7 +902,9 @@ export const ClientBookings = () => {
                     {t("clientBookings.providerRating")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
-                    {t("clientBookings.ratingOutOf", { rating: selectedBooking.providerRating.toFixed(1) })}
+                    {t("clientBookings.ratingOutOf", {
+                      rating: selectedBooking.providerRating.toFixed(1),
+                    })}
                   </p>
                 </div>
               </div>

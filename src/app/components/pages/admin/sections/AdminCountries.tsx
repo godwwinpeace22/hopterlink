@@ -3,10 +3,35 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "../../../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/card";
-import { Input } from "../../../ui/input";
 import { Label } from "../../../ui/label";
+import { Skeleton } from "../../../ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../ui/table";
 import { toast } from "sonner";
 import {
+  getCurrencyForCountry,
+  KNOWN_COUNTRIES,
   normalizeAllowedCountries,
   type AllowedCountry,
 } from "@/app/lib/countryConfig";
@@ -17,8 +42,8 @@ type AppSettingsRow = {
 
 export function AdminCountries() {
   const queryClient = useQueryClient();
-  const [newCode, setNewCode] = useState("");
-  const [newName, setNewName] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedCountryCode, setSelectedCountryCode] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "app_settings", "allowed_countries"],
@@ -35,6 +60,13 @@ export function AdminCountries() {
   });
 
   const countries = useMemo(() => normalizeAllowedCountries(data), [data]);
+
+  const selectableCountries = useMemo(() => {
+    const existingCodes = new Set(countries.map((country) => country.code));
+    return KNOWN_COUNTRIES.filter(
+      (country) => !existingCodes.has(country.code),
+    );
+  }, [countries]);
 
   const saveMutation = useMutation({
     mutationFn: async (nextCountries: AllowedCountry[]) => {
@@ -67,22 +99,23 @@ export function AdminCountries() {
   });
 
   const addCountry = () => {
-    const code = newCode.trim().toUpperCase();
-    const name = newName.trim();
+    const selectedCountry = KNOWN_COUNTRIES.find(
+      (country) => country.code === selectedCountryCode,
+    );
 
-    if (code.length !== 2 || !name) {
-      toast.error("Enter a valid 2-letter country code and country name.");
+    if (!selectedCountry) {
+      toast.error("Please select a country to add.");
       return;
     }
 
-    if (countries.some((country) => country.code === code)) {
+    if (countries.some((country) => country.code === selectedCountry.code)) {
       toast.error("This country is already in the allowed list.");
       return;
     }
 
-    saveMutation.mutate([...countries, { code, name }]);
-    setNewCode("");
-    setNewName("");
+    saveMutation.mutate([...countries, selectedCountry]);
+    setSelectedCountryCode("");
+    setIsAddDialogOpen(false);
   };
 
   const removeCountry = (code: string) => {
@@ -96,79 +129,142 @@ export function AdminCountries() {
     saveMutation.mutate(nextCountries);
   };
 
-  if (isLoading) {
-    return <div className="text-gray-500">Loading country settings...</div>;
-  }
+  const openAddDialog = () => {
+    if (selectableCountries.length === 0) {
+      toast.error("All supported countries are already in the allowed list.");
+      return;
+    }
+
+    setSelectedCountryCode(selectableCountries[0]?.code ?? "");
+    setIsAddDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Allowed Countries</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Control which countries are shown during client and provider signup.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Allowed Countries</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Control which countries are shown during client and provider signup.
+          </p>
+        </div>
+        <Button onClick={openAddDialog} disabled={saveMutation.isPending}>
+          Add country
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Add country</CardTitle>
+          <CardTitle className="text-base">Current Allowed Countries</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <Label htmlFor="country-code">Country code</Label>
-              <Input
-                id="country-code"
-                placeholder="CA"
-                value={newCode}
-                onChange={(event) => setNewCode(event.target.value)}
-                maxLength={2}
-              />
-            </div>
-            <div>
-              <Label htmlFor="country-name">Country name</Label>
-              <Input
-                id="country-name"
-                placeholder="Canada"
-                value={newName}
-                onChange={(event) => setNewName(event.target.value)}
-              />
-            </div>
-          </div>
-          <Button onClick={addCountry} disabled={saveMutation.isPending}>
-            Add country
-          </Button>
+        <CardContent className="pt-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Country</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Currency</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={`country-skeleton-${index}`}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-12" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-14" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-8 w-20" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : countries.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="py-6 text-center text-gray-500"
+                  >
+                    No countries configured.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                countries.map((country) => (
+                  <TableRow key={country.code}>
+                    <TableCell className="font-medium">
+                      {country.name}
+                    </TableCell>
+                    <TableCell>{country.code}</TableCell>
+                    <TableCell>{getCurrencyForCountry(country.code)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeCountry(country.code)}
+                        disabled={saveMutation.isPending}
+                      >
+                        Remove
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Current allowed countries</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Allowed Country</DialogTitle>
+            <DialogDescription>
+              Select a country from the supported list.
+            </DialogDescription>
+          </DialogHeader>
+
           <div className="space-y-2">
-            {countries.map((country) => (
-              <div
-                key={country.code}
-                className="flex items-center justify-between rounded-md border px-3 py-2"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{country.name}</p>
-                  <p className="text-xs text-gray-500">{country.code}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeCountry(country.code)}
-                  disabled={saveMutation.isPending}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
+            <Label htmlFor="allowed-country-select">Country</Label>
+            <Select
+              value={selectedCountryCode}
+              onValueChange={setSelectedCountryCode}
+            >
+              <SelectTrigger id="allowed-country-select">
+                <SelectValue placeholder="Select a country" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectableCountries.map((country) => (
+                  <SelectItem key={country.code} value={country.code}>
+                    {country.name} ({country.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddDialogOpen(false)}
+              disabled={saveMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={addCountry}
+              disabled={!selectedCountryCode || saveMutation.isPending}
+            >
+              Add country
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

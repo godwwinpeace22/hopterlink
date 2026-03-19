@@ -14,6 +14,7 @@ import { queryClient } from "@/lib/queryClient";
 import {
   getCurrencyForCountry,
   normalizeCountryCode,
+  withCountryDialCode,
 } from "@/app/lib/countryConfig";
 
 export type UserRole = "client" | "provider" | "admin";
@@ -403,11 +404,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Country is required.");
     }
 
+    const normalizedPhone = withCountryDialCode(phone, country);
+
     const currency = getCurrencyForCountry(country);
 
     const metadata: Record<string, string | number> = {
       full_name: input.fullName,
-      phone,
+      phone: normalizedPhone,
       country,
       currency,
       role: input.role,

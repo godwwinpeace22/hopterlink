@@ -1,13 +1,12 @@
 import { Link, Outlet, useLocation, useNavigate } from "@/lib/router";
-import logo from "@/assets/logo.png";
 import {
   BarChart3,
+  Briefcase,
   CheckCircle,
   Globe,
   LayoutDashboard,
   LogOut,
   MessageSquareWarning,
-  Shield,
   Tag,
   Users,
 } from "lucide-react";
@@ -31,6 +30,7 @@ import {
 const NAV_ITEMS = [
   { label: "Overview", path: "overview", icon: LayoutDashboard },
   { label: "Users", path: "users", icon: Users },
+  { label: "Jobs", path: "jobs", icon: Briefcase },
   { label: "Allowed Countries", path: "countries", icon: Globe },
   { label: "Service Categories", path: "services", icon: Tag },
   { label: "Provider Verification", path: "verification", icon: CheckCircle },
@@ -55,18 +55,15 @@ export function AdminDashboardLayout() {
       <Sidebar>
         <SidebarHeader>
           <Link to="/" className="flex items-center gap-2 px-2 py-3">
-            <img src={logo} alt="Hopterlink" className="h-8 w-auto" />
+            {/* <img src={logo} alt="Hopterlink" className="h-8 w-auto" /> */}
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-gray-900">
-                Hopterlink
-              </span>
-              <span className="text-xs text-red-600 font-medium flex items-center gap-1">
-                <Shield className="h-3 w-3" /> Admin
+              <span className="text-lg font-bold text-orange-600 uppercase">
+                Hopterlink Admin
               </span>
             </div>
           </Link>
         </SidebarHeader>
-        <SidebarSeparator />
+        {/* <SidebarSeparator /> */}
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel>Management</SidebarGroupLabel>

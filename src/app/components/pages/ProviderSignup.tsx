@@ -13,8 +13,10 @@ import { useServiceCategories } from "@/lib/useServiceCategories";
 import { useTranslation } from "react-i18next";
 import { useAllowedCountries } from "@/app/hooks/useAllowedCountries";
 import {
+  getDialCodeForCountry,
   getCurrencyForCountry,
   normalizeCountryCode,
+  withCountryDialCode,
 } from "@/app/lib/countryConfig";
 import { useEffect } from "react";
 
@@ -74,6 +76,8 @@ export function ProviderSignup() {
       return;
     }
 
+    const normalizedPhone = withCountryDialCode(formData.phone, country);
+
     const currency = getCurrencyForCountry(country);
 
     setIsSubmitting(true);
@@ -83,7 +87,7 @@ export function ProviderSignup() {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        phone: formData.phone.trim(),
+        phone: normalizedPhone,
         country,
         role: "provider",
         businessName: formData.fullName,
@@ -99,7 +103,7 @@ export function ProviderSignup() {
             role: "provider",
             email: formData.email,
             full_name: formData.fullName,
-            phone: formData.phone.trim(),
+            phone: normalizedPhone,
             country,
             currency,
           },
@@ -251,13 +255,18 @@ export function ProviderSignup() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder={t("providerSignup.phonePlaceholder")}
+                  placeholder={`${getDialCodeForCountry(formData.country || "CA")} 555 123 4567`}
                   value={formData.phone}
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
                   }
                   required
                 />
+                {formData.country && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Dial code: {getDialCodeForCountry(formData.country)}
+                  </p>
+                )}
               </div>
 
               <div>

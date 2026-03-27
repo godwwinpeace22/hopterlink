@@ -41,7 +41,11 @@ export function AdminRevenue() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const { data: byCurrency, isLoading, refetch: refetchByCurrency } = useQuery({
+  const {
+    data: byCurrency,
+    isLoading,
+    refetch: refetchByCurrency,
+  } = useQuery({
     queryKey: ["admin", "revenue", startDate, endDate],
     staleTime: 0,
     queryFn: async () => {
@@ -175,7 +179,9 @@ export function AdminRevenue() {
             disabled={isLoading}
             className="flex items-center gap-2 flex-shrink-0"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -307,7 +313,9 @@ export function AdminRevenue() {
                           <div className="text-2xl font-bold text-green-700">
                             {fmt(d.feesCollected, currentCurrency)}
                           </div>
-                          <p className="text-xs text-green-600 mt-1">From released escrows</p>
+                          <p className="text-xs text-green-600 mt-1">
+                            From released escrows
+                          </p>
                         </CardContent>
                       </Card>
 
@@ -322,7 +330,9 @@ export function AdminRevenue() {
                           <div className="text-2xl font-bold text-amber-600">
                             {fmt(d.feesPending, currentCurrency)}
                           </div>
-                          <p className="text-xs text-amber-600 mt-1">From held escrows</p>
+                          <p className="text-xs text-amber-600 mt-1">
+                            From held escrows
+                          </p>
                         </CardContent>
                       </Card>
 

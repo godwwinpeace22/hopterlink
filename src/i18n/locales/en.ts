@@ -615,6 +615,15 @@ const en = {
     escrowStatus: "Escrow",
     viewProfile: "View Profile",
     sendMessage: "Send Message",
+    releasePayment: "Release Payment",
+    releasingPayment: "Releasing...",
+    releasePaymentConfirmTitle: "Release payment to provider?",
+    releasePaymentConfirmDesc:
+      "This will transfer ${{amount}} to the provider. This cannot be undone.",
+    releasePaymentConfirm: "Yes, release",
+    releasePaymentCancel: "Cancel",
+    releasePaymentError: "Failed to release payment.",
+    paymentAlreadyReleased: "Payment released",
   },
 
   // ─── Client Dashboard – Jobs ───────────────────────────────────────────────

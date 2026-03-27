@@ -309,9 +309,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ]);
     }
 
-    setProfile((previousProfile) =>
-      isEqual(previousProfile, loadedProfile) ? previousProfile : loadedProfile,
-    );
+    setProfile((previousProfile) => {
+      if (!loadedProfile && previousProfile?.id === user.id) {
+        return previousProfile;
+      }
+
+      return isEqual(previousProfile, loadedProfile)
+        ? previousProfile
+        : loadedProfile;
+    });
     setMemberships((previousMemberships) =>
       isEqual(previousMemberships, loadedMemberships)
         ? previousMemberships
@@ -356,7 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         currentUserIdRef.current = session.user.id;
 
-        if (!hasHydratedSession.current || !sameUser || event === "SIGNED_IN") {
+        if (!hasHydratedSession.current || !sameUser) {
           if (!hasHydratedSession.current) {
             setIsLoading(true);
           }

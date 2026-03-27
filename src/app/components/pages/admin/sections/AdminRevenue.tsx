@@ -1,20 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/card";
+import { Button } from "../../../ui/button";
 import {
-  DollarSign,
   Activity,
   Lock,
   Unlock,
   TrendingUp,
   Calendar,
   ArrowRightLeft,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 
 type CurrencyTotals = {
   total: number;
-  fees: number;
+  feesCollected: number;
+  feesPending: number;
   held: number;
   released: number;
 };
@@ -39,8 +41,9 @@ export function AdminRevenue() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const { data: byCurrency, isLoading } = useQuery({
+  const { data: byCurrency, isLoading, refetch: refetchByCurrency } = useQuery({
     queryKey: ["admin", "revenue", startDate, endDate],
+    staleTime: 0,
     queryFn: async () => {
       let query = supabase
         .from("escrow_payments")
@@ -68,24 +71,37 @@ export function AdminRevenue() {
           (e.client as { currency?: string | null } | null)?.currency ?? "USD"
         ).toUpperCase();
         if (!acc[currency])
-          acc[currency] = { total: 0, fees: 0, held: 0, released: 0 };
+          acc[currency] = {
+            total: 0,
+            feesCollected: 0,
+            feesPending: 0,
+            held: 0,
+            released: 0,
+          };
         const amount = Number(e.amount ?? 0);
+        const fee = Number(e.platform_fee ?? 0);
         acc[currency].total += amount;
-        acc[currency].fees += Number(e.platform_fee ?? 0);
-        if (e.status === "held") acc[currency].held += amount;
-        if (e.status === "released") acc[currency].released += amount;
+        if (e.status === "released") {
+          acc[currency].feesCollected += fee;
+          acc[currency].released += amount;
+        }
+        if (e.status === "held") {
+          acc[currency].feesPending += fee;
+          acc[currency].held += amount;
+        }
       }
       return acc;
     },
   });
 
-  const { data: monthlyData } = useQuery({
+  const { data: monthlyData, refetch: refetchMonthly } = useQuery({
     queryKey: ["admin", "monthly-revenue", startDate, endDate],
+    staleTime: 0,
     queryFn: async () => {
       let query = supabase
         .from("escrow_payments")
         .select(
-          "amount, platform_fee, created_at, client:profiles!client_id(currency)",
+          "amount, platform_fee, status, created_at, client:profiles!client_id(currency)",
         );
 
       if (startDate) {
@@ -109,6 +125,7 @@ export function AdminRevenue() {
       > = {};
 
       for (const e of escrows) {
+        if (e.status !== "released") continue;
         const currency = (
           (e.client as { currency?: string | null } | null)?.currency ?? "USD"
         ).toUpperCase();
@@ -131,18 +148,37 @@ export function AdminRevenue() {
     },
   });
 
+  const handleRefresh = () => {
+    void refetchByCurrency();
+    void refetchMonthly();
+  };
+
   const currencies = Object.keys(byCurrency ?? {}).sort();
 
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Revenue Dashboard
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Monitor platform volume, fees, and escrow status across all
-          currencies.
-        </p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              Revenue Dashboard
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Monitor platform volume, fees, and escrow status across all
+              currencies.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-2 flex-shrink-0"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -245,11 +281,11 @@ export function AdminRevenue() {
                       </h2>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                       <Card className="border shadow-sm hover:shadow-md transition-shadow">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                           <CardTitle className="text-sm font-medium text-gray-500">
-                            Total {currentCurrency} Volume
+                            Total Volume
                           </CardTitle>
                           <Activity className="h-4 w-4 text-gray-400" />
                         </CardHeader>
@@ -263,14 +299,30 @@ export function AdminRevenue() {
                       <Card className="border shadow-sm hover:shadow-md transition-shadow bg-green-50/30">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                           <CardTitle className="text-sm font-medium text-green-700">
-                            Platform Fees (10%)
+                            Fees Collected
                           </CardTitle>
                           <TrendingUp className="h-4 w-4 text-green-600" />
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-green-700">
-                            {fmt(d.fees, currentCurrency)}
+                            {fmt(d.feesCollected, currentCurrency)}
                           </div>
+                          <p className="text-xs text-green-600 mt-1">From released escrows</p>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border shadow-sm hover:shadow-md transition-shadow bg-amber-50/30">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                          <CardTitle className="text-sm font-medium text-amber-700">
+                            Fees Pending
+                          </CardTitle>
+                          <TrendingUp className="h-4 w-4 text-amber-500" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold text-amber-600">
+                            {fmt(d.feesPending, currentCurrency)}
+                          </div>
+                          <p className="text-xs text-amber-600 mt-1">From held escrows</p>
                         </CardContent>
                       </Card>
 

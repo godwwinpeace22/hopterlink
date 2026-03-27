@@ -630,6 +630,15 @@ const fr: Record<string, any> = {
     escrowStatus: "Entiercement",
     viewProfile: "Voir le profil",
     sendMessage: "Envoyer un message",
+    releasePayment: "Libérer le paiement",
+    releasingPayment: "Libération...",
+    releasePaymentConfirmTitle: "Libérer le paiement au prestataire ?",
+    releasePaymentConfirmDesc:
+      "Cela transférera ${{amount}} au prestataire. Cette action est irréversible.",
+    releasePaymentConfirm: "Oui, libérer",
+    releasePaymentCancel: "Annuler",
+    releasePaymentError: "Échec de la libération du paiement.",
+    paymentAlreadyReleased: "Paiement libéré",
   },
 
   // ─── Client Dashboard – Jobs ───────────────────────────────────────────────

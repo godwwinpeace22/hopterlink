@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "@/lib/router";
+import { useLocation, useNavigate } from "@/lib/router";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -42,6 +42,7 @@ import { supabase } from "@/lib/supabase";
 import { useSupabaseQuery } from "@/lib/useSupabaseQuery";
 import { useServiceCategories } from "@/lib/useServiceCategories";
 import { useAuth } from "@/contexts/AuthContext";
+import { normalizeCountryCode } from "@/app/lib/countryConfig";
 
 interface ProviderSearchProps {}
 
@@ -80,29 +81,62 @@ type Provider = {
 
 export function ProviderSearch({}: ProviderSearchProps) {
   const navigate = useNavigate();
+  const routerLocation = useLocation();
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, user, isLoading: isAuthLoading } = useAuth();
   const { categoryNamesWithAll, ALL_SERVICES_LABEL } = useServiceCategories();
-  const userCountry = profile?.country ?? null;
+  const userCountry = normalizeCountryCode(profile?.country);
+  const hasUserCountry = userCountry.length > 0;
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(ALL_SERVICES_LABEL);
+  const [isFiltersMobileOpen, setIsFiltersMobileOpen] = useState(false);
   const [filters, setFilters] = useState({
     minRating: 0,
-    maxRate: 1000,
+    maxRate: null as number | null,
     availableNow: false,
     verifiedOnly: false,
   });
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(routerLocation.search);
+    setSearchQuery(searchParams.get("q") ?? "");
+    setLocation(searchParams.get("location") ?? "");
+  }, [routerLocation.search]);
+
+  const handleSearch = () => {
+    const searchParams = new URLSearchParams(routerLocation.search);
+
+    if (searchQuery.trim()) {
+      searchParams.set("q", searchQuery.trim());
+    } else {
+      searchParams.delete("q");
+    }
+
+    if (location.trim()) {
+      searchParams.set("location", location.trim());
+    } else {
+      searchParams.delete("location");
+    }
+
+    const nextSearch = searchParams.toString();
+    navigate(
+      `${routerLocation.pathname}${nextSearch ? `?${nextSearch}` : ""}`,
+      { replace: true },
+    );
+  };
 
   const {
     data: rawResult,
     isLoading,
     error,
-  } = useSupabaseQuery(["provider_profiles_search", userCountry], () =>
-    supabase
-      .from("provider_profiles")
-      .select(
-        `
+  } = useSupabaseQuery(
+    ["provider_profiles_search", userCountry],
+    () => {
+      let query = supabase
+        .from("provider_profiles")
+        .select(
+          `
           user_id,
           business_name,
           bio,
@@ -114,15 +148,24 @@ export function ProviderSearch({}: ProviderSearchProps) {
           jobs_completed,
           verification_status,
           availability,
-          profile:profiles!provider_profiles_user_id_fkey (
+          profile:profiles!provider_profiles_user_id_fkey!inner (
             full_name,
             avatar_url,
             country
           )
         `,
-      )
-      .eq("verification_status", "approved")
-      .order("rating", { ascending: false }),
+        )
+        .eq("verification_status", "approved");
+
+      if (userCountry) {
+        query = query.eq("profile.country", userCountry);
+      }
+
+      return query.order("rating", { ascending: false });
+    },
+    {
+      enabled: !isAuthLoading && hasUserCountry,
+    },
   );
 
   const providers = useMemo<Provider[]>(() => {
@@ -156,10 +199,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
         available: availabilityKeys.length > 0,
         bio: provider.bio ?? "",
         nextAvailable,
-        country:
-          profile && typeof profile.country === "string"
-            ? profile.country
-            : null,
+        country: normalizeCountryCode(profile?.country),
       };
     });
   }, [rawResult?.data, t]);
@@ -197,7 +237,8 @@ export function ProviderSearch({}: ProviderSearchProps) {
           );
 
         const matchesRating = provider.rating >= filters.minRating;
-        const matchesRate = provider.hourlyRate <= filters.maxRate;
+        const matchesRate =
+          filters.maxRate === null || provider.hourlyRate <= filters.maxRate;
         const matchesAvailable = !filters.availableNow || provider.available;
         const matchesVerified = !filters.verifiedOnly || provider.verified;
 
@@ -216,10 +257,16 @@ export function ProviderSearch({}: ProviderSearchProps) {
 
   const renderSkeletonCard = () => (
     <Card className="border-border bg-card">
-      <CardContent className="pt-6">
-        <div className="flex items-start gap-4">
-          <Skeleton className="h-20 w-20 rounded-full flex-shrink-0" />
-          <div className="flex-1 space-y-3">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+          <div className="flex items-center sm:items-start gap-4 w-full sm:w-auto">
+            <Skeleton className="h-14 w-14 sm:h-20 sm:w-20 rounded-full flex-shrink-0" />
+            <div className="sm:hidden flex-1 space-y-2">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+          <div className="flex-1 space-y-3 w-full">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-40" />
@@ -250,59 +297,96 @@ export function ProviderSearch({}: ProviderSearchProps) {
       key={provider.id}
       className="border-border bg-card transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
     >
-      <CardContent className="pt-6">
-        <div className="flex items-start gap-5">
-          <div className="relative flex-shrink-0">
-            <Avatar className="h-20 w-20">
-              {provider.avatar && (
-                <AvatarImage src={provider.avatar} alt={provider.name} />
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+          {/* Mobile Header: Avatar + Title area */}
+          <div className="flex items-center sm:items-start gap-4 w-full sm:w-auto">
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-14 w-14 sm:h-20 sm:w-20">
+                {provider.avatar && (
+                  <AvatarImage src={provider.avatar} alt={provider.name} />
+                )}
+                <AvatarFallback className="bg-primary/10 text-primary text-lg sm:text-xl font-semibold">
+                  {provider.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
+                </AvatarFallback>
+              </Avatar>
+              {provider.available && (
+                <span className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full bg-green-500 ring-2 ring-card" />
               )}
-              <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
-                {provider.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-            {provider.available && (
-              <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-green-500 ring-2 ring-card" />
-            )}
-          </div>
+            </div>
 
-          <div className="flex-1 min-w-0">
-            {/* Name + Badge row */}
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-lg text-foreground leading-tight">
+            {/* Mobile Only: Name & Rate next to Avatar */}
+            <div className="flex-1 min-w-0 sm:hidden">
+              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                <h3 className="font-semibold text-base text-foreground leading-tight truncate max-w-[85%]">
                   {provider.name}
                 </h3>
                 {provider.verified && (
-                  <CheckCircle className="h-4.5 w-4.5 text-primary flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
                 )}
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center justify-between mb-1.5 gap-2">
+                <p className="text-lg font-bold text-primary">
+                  ${provider.hourlyRate}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    /hr
+                  </span>
+                </p>
                 {provider.available ? (
-                  <Badge className="bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/10 text-xs">
+                  <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px] px-1.5 py-0 h-5">
                     {t("providerSearch.availableNow")}
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
-                    className="text-xs text-muted-foreground"
+                    className="text-[10px] px-1.5 py-0 h-5 text-muted-foreground"
                   >
                     {t("providerSearch.unavailable")}
                   </Badge>
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Rate prominent display */}
-            <p className="text-2xl font-bold text-primary mb-3">
-              ${provider.hourlyRate}
-              <span className="text-sm font-normal text-muted-foreground">
-                /hr
-              </span>
-            </p>
+          <div className="flex-1 min-w-0 w-full">
+            {/* Desktop Only: Name & Badges & Rate inside the flex column */}
+            <div className="hidden sm:block">
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold text-lg text-foreground leading-tight">
+                    {provider.name}
+                  </h3>
+                  {provider.verified && (
+                    <CheckCircle className="h-4.5 w-4.5 text-primary flex-shrink-0" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {provider.available ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/10 text-xs">
+                      {t("providerSearch.availableNow")}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-xs text-muted-foreground"
+                    >
+                      {t("providerSearch.unavailable")}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Rate prominent display */}
+              <p className="text-2xl font-bold text-primary mb-3">
+                ${provider.hourlyRate}
+                <span className="text-sm font-normal text-muted-foreground">
+                  /hr
+                </span>
+              </p>
+            </div>
 
             {/* Rating + jobs row */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
@@ -421,10 +505,14 @@ export function ProviderSearch({}: ProviderSearchProps) {
 
   const activeFilterCount = [
     filters.minRating > 0,
-    filters.maxRate < 1000,
+    filters.maxRate !== null,
     filters.availableNow,
     filters.verifiedOnly,
   ].filter(Boolean).length;
+
+  const inAreaProvidersCount = providers.length;
+  const visibleProvidersCount = filteredProviders.length;
+  const isPageLoading = isAuthLoading || (hasUserCountry && isLoading);
 
   return (
     <div className="w-full min-w-0 py-6">
@@ -436,14 +524,14 @@ export function ProviderSearch({}: ProviderSearchProps) {
           </h1>
         </div>
         <p className="text-muted-foreground mb-6">
-          {isLoading
+          {isPageLoading
             ? t("providerSearch.loadingHero")
             : t("providerSearch.availableCount", {
-                count: filteredProviders.length,
+                count: inAreaProvidersCount,
               })}
         </p>
 
-        {userCountry && (
+        {hasUserCountry && (
           <p className="text-xs text-muted-foreground mb-4">
             {t("providerSearch.countryRestricted", { country: userCountry })}
           </p>
@@ -455,7 +543,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
             {
               icon: <Users className="h-4 w-4" />,
               label: t("providerSearch.statsProviders", {
-                count: providers.length,
+                count: inAreaProvidersCount,
               }),
             },
             {
@@ -488,6 +576,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                     placeholder={t("providerSearch.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     className="pl-10"
                   />
                 </div>
@@ -499,14 +588,19 @@ export function ProviderSearch({}: ProviderSearchProps) {
                     placeholder={t("providerSearch.locationPlaceholder")}
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     className="pl-10"
                   />
                 </div>
               </div>
               <div className="md:col-span-3">
-                <Button className="w-full" disabled={isLoading}>
+                <Button
+                  className="w-full"
+                  disabled={isPageLoading}
+                  onClick={handleSearch}
+                >
                   <Search className="h-4 w-4 mr-2" />
-                  {isLoading
+                  {isPageLoading
                     ? t("providerSearch.searching")
                     : t("providerSearch.search")}
                 </Button>
@@ -523,14 +617,14 @@ export function ProviderSearch({}: ProviderSearchProps) {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             {t("providerSearch.browseByCategory")}
           </h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex overflow-x-auto sm:flex-wrap gap-2 pb-2 sm:pb-0 -mx-2 px-2 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {categoryNamesWithAll.map((category) => {
               const isSelected = selectedCategory === category;
               return (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all duration-150 ${
+                  className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all duration-150 ${
                     isSelected
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
                       : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
@@ -545,9 +639,26 @@ export function ProviderSearch({}: ProviderSearchProps) {
         </div>
 
         {/* Filters and Results */}
+        <div className="flex flex-col lg:hidden mb-4">
+          <Button
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+            onClick={() => setIsFiltersMobileOpen(!isFiltersMobileOpen)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {isFiltersMobileOpen ? "Hide Filters" : t("providerSearch.filters")}
+            {activeFilterCount > 0 && (
+              <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filter sidebar */}
-          <div className="lg:col-span-1 self-start sticky top-4">
+          <div
+            className={`lg:col-span-1 self-start lg:sticky lg:top-4 relative z-0 ${isFiltersMobileOpen ? "block" : "hidden"} lg:block`}
+          >
             <Card className="border-border bg-card">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between text-base">
@@ -606,20 +717,25 @@ export function ProviderSearch({}: ProviderSearchProps) {
                     <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       type="number"
-                      value={filters.maxRate}
+                      value={filters.maxRate ?? ""}
                       onChange={(e) =>
                         setFilters({
                           ...filters,
-                          maxRate: Number(e.target.value),
+                          maxRate:
+                            e.target.value.trim() === ""
+                              ? null
+                              : Number(e.target.value),
                         })
                       }
-                      placeholder="1000"
+                      placeholder="No limit"
                       className="pl-9"
                     />
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t("providerSearch.upToRate", { rate: filters.maxRate })}
-                  </p>
+                  {filters.maxRate !== null && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("providerSearch.upToRate", { rate: filters.maxRate })}
+                    </p>
+                  )}
                 </div>
 
                 <Separator />
@@ -668,7 +784,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                       onClick={() =>
                         setFilters({
                           minRating: 0,
-                          maxRate: 1000,
+                          maxRate: null,
                           availableNow: false,
                           verifiedOnly: false,
                         })
@@ -683,15 +799,15 @@ export function ProviderSearch({}: ProviderSearchProps) {
           </div>
 
           {/* Results */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 relative z-10">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-xl font-bold text-foreground">
-                  {isLoading ? (
+                  {isPageLoading ? (
                     <Skeleton className="h-6 w-40 inline-block" />
                   ) : (
                     t("providerSearch.found", {
-                      count: filteredProviders.length,
+                      count: visibleProvidersCount,
                     })
                   )}
                 </h2>
@@ -708,19 +824,19 @@ export function ProviderSearch({}: ProviderSearchProps) {
               </div>
             )}
 
-            {!userCountry && (
+            {!isAuthLoading && Boolean(user) && !hasUserCountry && (
               <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                 {t("providerSearch.countryRequiredNotice")}
               </div>
             )}
 
-            {isLoading ? (
+            {isPageLoading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <div key={i}>{renderSkeletonCard()}</div>
                 ))}
               </div>
-            ) : filteredProviders.length === 0 ? (
+            ) : visibleProvidersCount === 0 ? (
               <Card>
                 <CardContent className="py-16 text-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -740,7 +856,7 @@ export function ProviderSearch({}: ProviderSearchProps) {
                       setSelectedCategory(ALL_SERVICES_LABEL);
                       setFilters({
                         minRating: 0,
-                        maxRate: 1000,
+                        maxRate: null,
                         availableNow: false,
                         verifiedOnly: false,
                       });

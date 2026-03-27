@@ -20,6 +20,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../../../ui/dialog";
@@ -43,6 +44,30 @@ export const ClientBookings = () => {
     null,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [releaseConfirmBooking, setReleaseConfirmBooking] =
+    useState<BookingItem | null>(null);
+  const [isReleasingEscrow, setIsReleasingEscrow] = useState(false);
+
+  const handleReleaseEscrow = async (booking: BookingItem) => {
+    setIsReleasingEscrow(true);
+    setErrorMessage(null);
+    try {
+      const { error } = await supabase.rpc("release_escrow", {
+        p_booking_id: booking.id,
+      });
+      if (error) throw error;
+      setReleaseConfirmBooking(null);
+      refetchBookings();
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : t("clientBookings.releasePaymentError"),
+      );
+    } finally {
+      setIsReleasingEscrow(false);
+    }
+  };
 
   const { data: bookingsResult, refetch: refetchBookings } = useSupabaseQuery(
     ["client_bookings", user?.id],
@@ -626,8 +651,27 @@ export const ClientBookings = () => {
                                     setDetailsDialogOpen(true);
                                   }}
                                 >
-                                  View Details
+                                  {t("clientBookings.viewDetails")}
                                 </Button>
+                                {booking.escrowStatus === "held" ||
+                                booking.escrowStatus === "pending" ? (
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 text-white hover:bg-green-700"
+                                    onClick={() =>
+                                      setReleaseConfirmBooking(booking)
+                                    }
+                                  >
+                                    {t("clientBookings.releasePayment")}
+                                  </Button>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-green-700 border-green-300 justify-center py-1"
+                                  >
+                                    {t("clientBookings.paymentAlreadyReleased")}
+                                  </Badge>
+                                )}
                                 <Button
                                   size="sm"
                                   className="bg-[#F1A400] text-slate-950 hover:bg-[#EFA055]"
@@ -641,25 +685,6 @@ export const ClientBookings = () => {
                                   {booking.hasReview
                                     ? t("clientBookings.reviewExists")
                                     : t("clientBookings.leaveReview")}
-                                </Button>
-                                {/* <Button size="sm" variant="outline">
-                                  View Receipt
-                                </Button> */}
-                                {/* <Button size="sm" variant="outline">
-                                  Book Again
-                                </Button> */}
-                              </div>
-                              <div className="flex flex-col gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-[#F7C876] text-[#8A5A00] hover:bg-[#FFF7E8]"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setDetailsDialogOpen(true);
-                                  }}
-                                >
-                                  {t("clientBookings.viewDetails")}
                                 </Button>
                               </div>
                             </div>
@@ -752,6 +777,48 @@ export const ClientBookings = () => {
           })()}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={releaseConfirmBooking !== null}
+        onOpenChange={(open) => !open && setReleaseConfirmBooking(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t("clientBookings.releasePaymentConfirmTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("clientBookings.releasePaymentConfirmDesc", {
+                amount: releaseConfirmBooking?.price ?? 0,
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          {errorMessage && (
+            <p className="text-sm text-destructive">{errorMessage}</p>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setReleaseConfirmBooking(null)}
+              disabled={isReleasingEscrow}
+            >
+              {t("clientBookings.releasePaymentCancel")}
+            </Button>
+            <Button
+              className="bg-green-600 text-white hover:bg-green-700"
+              onClick={() =>
+                releaseConfirmBooking &&
+                handleReleaseEscrow(releaseConfirmBooking)
+              }
+              disabled={isReleasingEscrow}
+            >
+              {isReleasingEscrow
+                ? t("clientBookings.releasingPayment")
+                : t("clientBookings.releasePaymentConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
         <DialogContent>

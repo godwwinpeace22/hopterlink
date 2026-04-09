@@ -175,11 +175,7 @@ export function ClientDashboardLayout({}: ClientDashboardLayoutProps) {
       },
       {
         title: t("clientDashboard.sectionServices"),
-        items: [
-          "providers",
-          "bookings",
-          "reviews",
-        ] as ClientDashboardSection[],
+        items: ["providers", "bookings", "reviews"] as ClientDashboardSection[],
       },
       {
         title: t("clientDashboard.sectionJobs"),

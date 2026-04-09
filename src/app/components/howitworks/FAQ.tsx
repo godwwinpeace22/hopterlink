@@ -10,7 +10,7 @@ const faqItems = [
   {
     question: "What if I'm not satisfied with the work?",
     answer:
-      "Your payment is held in escrow until you confirm the job is complete. If there's an issue, our dispute resolution team will mediate to ensure a fair outcome.",
+      "Payment is arranged directly between you and the provider. You can discuss terms, timing, and method through chat or in person — giving you full flexibility and control.",
   },
   {
     question: "How are providers verified?",
@@ -25,7 +25,7 @@ const faqItems = [
   {
     question: "Is my payment information secure?",
     answer:
-      "Absolutely. We use bank-level encryption and our secure escrow system protects both clients and providers throughout every transaction.",
+      "Yes. We take your security seriously. All account data is protected with bank-level encryption. Payment arrangements are handled directly and flexibly between you and your provider.",
   },
   {
     question: "Can I cancel a booking?",

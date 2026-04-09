@@ -19,7 +19,7 @@ const features = [
     id: 3,
     title: "Secure Booking",
     description:
-      "Your payment is held in escrow until the job is completed to your satisfaction",
+      "Arrange payment directly with your provider — flexible, transparent, and on your own terms",
     icon: Shield,
   },
   {

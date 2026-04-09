@@ -19,7 +19,7 @@ const steps = [
     icon: Award,
     title: "Complete & earn",
     description:
-      "Complete the job to the client's satisfaction and receive secure payment directly to your account. Fast payouts within 1-3 business days, every time.",
+      "Complete the job to the client's satisfaction and arrange payment directly. Flexible payment terms agreed between you and the client.",
   },
   {
     icon: Globe,

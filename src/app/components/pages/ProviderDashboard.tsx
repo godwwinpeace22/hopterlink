@@ -64,11 +64,6 @@ export function ProviderDashboard() {
         icon: CalendarIcon,
       },
       {
-        id: "wallet" as ProviderDashboardSection,
-        label: t("providerDashboard.navWallet"),
-        icon: Wallet,
-      },
-      {
         id: "profile" as ProviderDashboardSection,
         label: t("providerDashboard.navProfile"),
         icon: User,
@@ -115,7 +110,7 @@ export function ProviderDashboard() {
       },
       {
         title: t("providerDashboard.sectionBusiness"),
-        items: ["wallet", "reviews"] as ProviderDashboardSection[],
+        items: ["reviews"] as ProviderDashboardSection[],
       },
       {
         title: t("providerDashboard.sectionAccount"),

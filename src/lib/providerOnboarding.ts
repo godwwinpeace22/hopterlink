@@ -123,8 +123,6 @@ export function getProviderOnboardingSnapshot(params: {
     resumeStep = "profile";
   } else if (!hasAvailability) {
     resumeStep = "availability";
-  } else if (!hasPaymentSetup) {
-    resumeStep = "payment";
   } else if (hasSubmittedVerification) {
     resumeStep = "pending";
   } else {

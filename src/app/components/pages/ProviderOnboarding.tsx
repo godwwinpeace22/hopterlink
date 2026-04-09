@@ -51,7 +51,6 @@ const STEP_ORDER: ProviderOnboardingStep[] = [
   "documents",
   "profile",
   "availability",
-  "payment",
   "review",
   "pending",
 ];
@@ -61,7 +60,6 @@ const STEP_CONFIG = [
   { id: "documents", label: "Documents", icon: Upload },
   { id: "profile", label: "Profile Setup", icon: Briefcase },
   { id: "availability", label: "Availability", icon: Calendar },
-  { id: "payment", label: "Payment", icon: CreditCard },
   { id: "review", label: "Review", icon: CheckCircle2 },
 ] as const;
 

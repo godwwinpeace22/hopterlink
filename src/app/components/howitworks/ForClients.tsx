@@ -19,7 +19,7 @@ const steps = [
     icon: Award,
     title: "Pay Securely",
     description:
-      "Fund your job with our secure payment system. Money is held in escrow until work is completed to your satisfaction. No upfront payments to unknown providers.",
+      "Book your job and arrange payment directly with your provider. Discuss terms, timing, and pricing through chat or in person — fully flexible.",
   },
   {
     icon: Globe,

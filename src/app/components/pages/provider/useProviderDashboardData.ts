@@ -51,7 +51,6 @@ const dashboardSections: ProviderDashboardSection[] = [
   "job-board",
   "jobs",
   "calendar",
-  "wallet",
   "profile",
   "messages",
   "notifications",
@@ -63,7 +62,6 @@ const restrictedSections: ProviderDashboardSection[] = [
   "job-board",
   "jobs",
   "calendar",
-  "wallet",
   "reviews",
 ];
 

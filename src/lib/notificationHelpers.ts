@@ -53,7 +53,7 @@ export function resolveNotificationRoute(
       return { path: `${base}/messages` };
 
     case "payment_released":
-      return { path: `${base}/wallet` };
+      return { path: `${base}/bookings` };
 
     case "review_received":
       return { path: `${base}/reviews` };
@@ -62,7 +62,7 @@ export function resolveNotificationRoute(
       return { path: `${base}/settings` };
 
     case "reward_earned":
-      return { path: `${base}/wallet` };
+      return { path: `${base}/overview` };
 
     default:
       return null;

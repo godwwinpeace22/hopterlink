@@ -413,7 +413,6 @@ export function BookingWizard({ data }: BookingWizardProps) {
     { id: "datetime", label: "Date & Time", icon: CalendarIcon },
     { id: "details", label: "Job Details", icon: MapPin },
     { id: "photos", label: "Photos (Optional)", icon: Upload },
-    { id: "payment", label: "Payment", icon: CreditCard },
     { id: "review", label: "Review & Confirm", icon: CheckCircle },
   ];
 
@@ -425,7 +424,6 @@ export function BookingWizard({ data }: BookingWizardProps) {
     "datetime",
     "details",
     "photos",
-    "payment",
     "review",
   ];
 
@@ -492,10 +490,7 @@ export function BookingWizard({ data }: BookingWizardProps) {
     }
 
     if (bookingData.paymentMethod === "wallet" && !isWalletSufficient) {
-      setErrorMessage(
-        "Wallet balance is insufficient. Please top up to continue.",
-      );
-      return;
+      // payment check skipped — payment handled outside the app
     }
 
     const serviceType = bookingData.service || bookingData.customService;
@@ -611,8 +606,6 @@ export function BookingWizard({ data }: BookingWizardProps) {
         const photosIndex = stepOrder.indexOf("photos");
         return hasPhotos || currentIndex > photosIndex;
       }
-      case "payment":
-        return isWalletSufficient && !isWalletLoading;
       case "review":
         return bookingData.agreeToTerms;
       default:
@@ -1069,72 +1062,6 @@ export function BookingWizard({ data }: BookingWizardProps) {
             <Button variant="ghost" className="w-full" onClick={handleNext}>
               Skip this step
             </Button>
-          </div>
-        );
-
-      case "payment":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Payment</h2>
-              <p className="text-gray-600">
-                Wallet is the available payment method for this booking
-              </p>
-            </div>
-
-            <Card className="bg-blue-50 border border-blue-200">
-              <CardContent className="pt-6 space-y-3">
-                {isWalletLoading ? (
-                  <p className="text-sm text-gray-700">
-                    Checking wallet balance...
-                  </p>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between rounded-md border border-blue-200 bg-white px-3 py-2">
-                      <span className="text-sm text-gray-600">
-                        Payment Method
-                      </span>
-                      <span className="text-sm font-semibold text-blue-700">
-                        Wallet
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Available Balance</span>
-                      <span className="font-semibold">
-                        {formatCurrency(availableWalletBalance)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Booking Total</span>
-                      <span className="font-semibold">
-                        {formatCurrency(estimatedTotal)}
-                      </span>
-                    </div>
-
-                    {isWalletSufficient ? (
-                      <div className="rounded-md border border-green-300 bg-green-100 px-3 py-2 text-sm text-green-800">
-                        Wallet balance is sufficient for this booking.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-sm text-amber-900">
-                          Top-up required: {formatCurrency(walletShortfall)}
-                        </div>
-                        <Button
-                          onClick={handleWalletTopup}
-                          disabled={createTopupCheckoutMutation.isPending}
-                          className="w-full"
-                        >
-                          {createTopupCheckoutMutation.isPending
-                            ? "Redirecting..."
-                            : "Top up wallet"}
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
           </div>
         );
 

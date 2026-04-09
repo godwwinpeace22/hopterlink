@@ -57,7 +57,6 @@ const dashboardSections: ClientDashboardSection[] = [
   "booking",
   "bookings",
   "reviews",
-  "wallet",
   "my-jobs",
   "job-details",
   "post-job",
@@ -151,7 +150,6 @@ export function ClientDashboardLayout({}: ClientDashboardLayoutProps) {
         icon: Calendar,
       },
       { id: "reviews", label: t("clientDashboard.navReviews"), icon: Star },
-      { id: "wallet", label: t("clientDashboard.navWallet"), icon: Wallet },
       { id: "my-jobs", label: t("clientDashboard.navMyJobs"), icon: Briefcase },
       { id: "post-job", label: t("clientDashboard.navPostJob"), icon: Gift },
       {
@@ -181,7 +179,6 @@ export function ClientDashboardLayout({}: ClientDashboardLayoutProps) {
           "providers",
           "bookings",
           "reviews",
-          "wallet",
         ] as ClientDashboardSection[],
       },
       {

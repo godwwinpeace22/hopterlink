@@ -645,7 +645,7 @@ export default function LandingPage() {
                         <HowItWorksBackgroundImageAndText text="3" />
                         <HowItWorksBackgroundImage>Pay Securely</HowItWorksBackgroundImage>
                         <div className="absolute h-[72px] left-[24px] top-[136px] w-[270px]" data-name="HowItWorks">
-                          <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[264px]">Fund your job with secure payment. Money is held in escrow until work is completed to your satisfaction.</p>
+                          <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[264px]">Book your job and arrange payment directly with your provider. Flexible terms, fully on your schedule.</p>
                         </div>
                       </div>
                     </div>
@@ -746,14 +746,14 @@ export default function LandingPage() {
                       <div className="absolute h-[23.5px] left-0 top-[2px] w-[69.109px]" data-name="Text">
                         <p className="absolute font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[28px] left-0 not-italic text-[#f1a400] text-[20px] top-[-2px] tracking-[-0.4492px] w-[70px]">Secure</p>
                       </div>
-                      <p className="absolute font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[28px] left-[69.11px] not-italic text-[#101828] text-[20px] text-nowrap top-0 tracking-[-0.4492px]">Escrow Payments</p>
+                      <p className="absolute font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[28px] left-[69.11px] not-italic text-[#101828] text-[20px] text-nowrap top-0 tracking-[-0.4492px]">Flexible Payments</p>
                     </div>
                     <div className="absolute h-[48px] left-[32px] top-[152px] w-[316px]" data-name="Features">
-                      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[121px]">Your payment is</p>
+                      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[121px]">Arrange payment</p>
                       <div className="absolute h-[19px] left-[120.05px] top-[2.5px] w-[75.063px]" data-name="Text">
                         <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#f1a400] text-[16px] top-[-3px] tracking-[-0.3125px] w-[76px]">protected</p>
                       </div>
-                      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[24px] tracking-[-0.3125px]">until the job is completed to your satisfaction</p>
+                      <p className="absolute font-['Inter:Regular',sans-serif] font-normal leading-[24px] left-0 not-italic text-[#4a5565] text-[16px] text-nowrap top-[24px] tracking-[-0.3125px]">directly with your provider — flexible and transparent</p>
                     </div>
                   </BackgroundImage3>
                 </div>
@@ -898,7 +898,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                   <div className="h-[96px] relative shrink-0 w-full" data-name="Testimonials">
-                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[316px]">{`"Hopterlink has transformed my business. I get consistent bookings and the payment system is reliable. Best platform for independent contractors."`}</p>
+                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[316px]">{`"Hopterlink has transformed my business. I get consistent bookings and the platform is reliable. Best platform for independent contractors."`}</p>
                   </div>
                   <div className="content-stretch flex gap-[12px] h-[48px] items-center relative shrink-0 w-full" data-name="Testimonials">
                     <div className="rounded-[1.67772e+07px] shrink-0 size-[48px]" data-name="Image (Mike Rodriguez)" />
@@ -920,7 +920,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                   <div className="h-[96px] relative shrink-0 w-full" data-name="Testimonials">
-                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[318px]">{`"I manage 12 properties and use Hopterlink for everything from cleaning to emergency repairs. The escrow system gives me peace of mind."`}</p>
+                    <p className="absolute font-['Inter:Italic',sans-serif] font-normal italic leading-[24px] left-0 text-[#364153] text-[16px] top-[-0.5px] tracking-[-0.3125px] w-[318px]">{`"I manage 12 properties and use Hopterlink for everything from cleaning to emergency repairs. The platform gives me peace of mind."`}</p>
                   </div>
                   <div className="content-stretch flex gap-[12px] h-[48px] items-center relative shrink-0 w-full" data-name="Testimonials">
                     <div className="rounded-[1.67772e+07px] shrink-0 size-[48px]" data-name="Image (Emily Chen)" />

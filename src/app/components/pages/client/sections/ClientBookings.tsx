@@ -367,12 +367,6 @@ export const ClientBookings = () => {
                                         <MapPin className="h-4 w-4" />
                                         {booking.address}
                                       </p>
-                                      <p className="text-sm text-gray-600">
-                                        {t("clientBookings.paymentLabel")}:{" "}
-                                        {booking.escrowStatus ??
-                                          booking.paymentStatus ??
-                                          "pending"}
-                                      </p>
                                       <p className="font-bold text-gray-900 mt-2">
                                         {t("clientBookings.price", {
                                           defaultValue: "Price",
@@ -628,12 +622,6 @@ export const ClientBookings = () => {
                                       {t("clientBookings.completedLabel")}:{" "}
                                       {booking.date}
                                     </p>
-                                    <p className="text-sm text-gray-600">
-                                      {t("clientBookings.paymentLabel")}:{" "}
-                                      {booking.escrowStatus ??
-                                        booking.paymentStatus ??
-                                        "pending"}
-                                    </p>
                                     <p className="font-bold text-green-600 mt-2">
                                       {t("clientBookings.paidLabel")}: $
                                       {booking.price}
@@ -653,25 +641,6 @@ export const ClientBookings = () => {
                                 >
                                   {t("clientBookings.viewDetails")}
                                 </Button>
-                                {booking.escrowStatus === "held" ||
-                                booking.escrowStatus === "pending" ? (
-                                  <Button
-                                    size="sm"
-                                    className="bg-green-600 text-white hover:bg-green-700"
-                                    onClick={() =>
-                                      setReleaseConfirmBooking(booking)
-                                    }
-                                  >
-                                    {t("clientBookings.releasePayment")}
-                                  </Button>
-                                ) : (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs text-green-700 border-green-300 justify-center py-1"
-                                  >
-                                    {t("clientBookings.paymentAlreadyReleased")}
-                                  </Badge>
-                                )}
                                 <Button
                                   size="sm"
                                   className="bg-[#F1A400] text-slate-950 hover:bg-[#EFA055]"
@@ -754,12 +723,6 @@ export const ClientBookings = () => {
                                       <MapPin className="h-4 w-4" />
                                       {booking.address}
                                     </p>
-                                    <p className="text-sm text-gray-600">
-                                      {t("clientBookings.paymentLabel")}:{" "}
-                                      {booking.escrowStatus ??
-                                        booking.paymentStatus ??
-                                        "pending"}
-                                    </p>
                                     <p className="font-bold text-gray-900 mt-2">
                                       {t("clientBookings.price")}: $
                                       {booking.price}
@@ -777,48 +740,6 @@ export const ClientBookings = () => {
           })()}
         </CardContent>
       </Card>
-
-      <Dialog
-        open={releaseConfirmBooking !== null}
-        onOpenChange={(open) => !open && setReleaseConfirmBooking(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t("clientBookings.releasePaymentConfirmTitle")}
-            </DialogTitle>
-            <DialogDescription>
-              {t("clientBookings.releasePaymentConfirmDesc", {
-                amount: releaseConfirmBooking?.price ?? 0,
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          {errorMessage && (
-            <p className="text-sm text-destructive">{errorMessage}</p>
-          )}
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setReleaseConfirmBooking(null)}
-              disabled={isReleasingEscrow}
-            >
-              {t("clientBookings.releasePaymentCancel")}
-            </Button>
-            <Button
-              className="bg-green-600 text-white hover:bg-green-700"
-              onClick={() =>
-                releaseConfirmBooking &&
-                handleReleaseEscrow(releaseConfirmBooking)
-              }
-              disabled={isReleasingEscrow}
-            >
-              {isReleasingEscrow
-                ? t("clientBookings.releasingPayment")
-                : t("clientBookings.releasePaymentConfirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
         <DialogContent>
@@ -952,16 +873,6 @@ export const ClientBookings = () => {
                   <p className="mt-2 text-sm font-medium text-slate-900">
                     {selectedBooking.address ||
                       t("clientBookings.addressNotProvided")}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-200 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    {t("clientBookings.paymentStatus")}
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-slate-900">
-                    {selectedBooking.escrowStatus ??
-                      selectedBooking.paymentStatus ??
-                      "pending"}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4">
